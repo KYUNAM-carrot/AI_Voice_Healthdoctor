@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker-compose up:*)",
+      "Bash(docker-compose ps:*)",
+      "Bash(curl:*)",
+      "Bash(powershell -Command \"Start-Sleep -Seconds 5; curl http://localhost:8002/health\")",
+      "Bash(docker-compose logs:*)",
+      "Bash(cat:*)",
+      "Bash(powershell -Command \"Invoke-WebRequest -Uri http://localhost:8004/health -UseBasicParsing | Select-Object -ExpandProperty Content\")",
+      "Bash(docker-compose exec:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(docker-compose restart:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(powershell -Command \"Start-Sleep -Seconds 10; cd D:/Dev_project/AI_Voice_Healthdoctor/healthai-backend; docker-compose exec core_api alembic revision --autogenerate -m ''Initial schema with users, families, conversations, routines, subscriptions''\")",
+      "Bash(python -c:*)",
+      "Bash(for char in choi_hyunwoo oh_kyungmi lee_soojin park_eunseo jung_yujin)",
+      "Bash(do echo \"Testing $char...\")",
+      "Bash(done)",
+      "Bash(powershell -Command \"Invoke-WebRequest -Uri http://localhost:8002/docs -UseBasicParsing | Select-Object -ExpandProperty Content\")",
+      "Bash(flutter create:*)",
+      "Bash(flutter pub get:*)",
+      "Bash(if not exist \"lib\\core\\theme\" mkdir libcoretheme)",
+      "Bash(powershell -Command:*)",
+      "Bash(flutter clean:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
