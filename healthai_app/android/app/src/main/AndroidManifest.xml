@@ -2,6 +2,9 @@
     <!-- 인터넷 권한 -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- 마이크 권한 (음성 녹음) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+
     <!-- Health Connect 권한 -->
     <uses-permission android:name="android.permission.health.READ_STEPS"/>
     <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>

@@ -164,11 +164,10 @@ class _CharacterSelectionScreenState extends State<CharacterSelectionScreen> {
       elevation: 4,
       child: InkWell(
         onTap: () {
-          // 캐릭터 선택 시 상담 화면으로 이동
+          // 캐릭터 선택 시 음성 상담 화면으로 이동
           Navigator.pushNamed(
             context,
-            '/conversation',
-            arguments: character,
+            '/voice-conversation/${character.id}',
           );
         },
         child: Padding(

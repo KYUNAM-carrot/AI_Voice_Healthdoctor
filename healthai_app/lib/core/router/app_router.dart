@@ -8,6 +8,7 @@ import '../../features/health/screens/wearable_sync_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/family/screens/family_list_screen.dart';
 import '../../features/conversation/screens/conversation_screen.dart';
+import '../../features/conversation/screens/voice_conversation_screen.dart';
 import '../../features/character/screens/character_selection_screen.dart';
 
 // Router configuration
@@ -61,6 +62,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final characterId = state.pathParameters['characterId']!;
           return ConversationScreen(characterId: characterId);
+        },
+      ),
+      GoRoute(
+        path: '/voice-conversation/:characterId',
+        name: 'voice-conversation',
+        builder: (context, state) {
+          final characterId = state.pathParameters['characterId']!;
+          return VoiceConversationScreen(characterId: characterId);
         },
       ),
     ],
