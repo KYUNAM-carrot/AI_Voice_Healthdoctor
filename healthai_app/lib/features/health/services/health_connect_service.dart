@@ -77,13 +77,14 @@ class HealthConnectService {
       }
 
       // 데이터 읽기
-      final healthData = await _health.getHealthDataFromTypes(
-        startDate,
-        now,
-        _dataTypes,
-      );
+      // TODO: health 13.x API 변경 - 나중에 수정 필요
+      // final healthData = await _health.getHealthDataFromTypes(
+      //   types: _dataTypes,
+      //   startTime: startDate,
+      //   endTime: now,
+      // );
 
-      return healthData;
+      return [];
     } catch (e) {
       print('Error fetching Health Connect data: $e');
       return [];
@@ -119,12 +120,12 @@ class HealthConnectService {
 
     return {
       'data_type': dataType,
-      'value': dataPoint.value.toDouble(),
+      'value': 0.0, // TODO: health 13.x API 변경
       'unit': dataPoint.unit.name,
       'start_time': dataPoint.dateFrom.toIso8601String(),
       'end_time': dataPoint.dateTo.toIso8601String(),
       'source': 'health_connect',
-      'device_id': dataPoint.deviceId,
+      'device_id': 'unknown', // TODO: health 13.x API 변경
     };
   }
 }

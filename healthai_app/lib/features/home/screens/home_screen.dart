@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/common_widgets.dart';
 import '../../characters/providers/characters_provider.dart';
@@ -26,7 +27,7 @@ class HomeScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () {
-              // TODO: 설정 화면 이동
+              context.push('/settings');
             },
           ),
         ],
@@ -58,10 +59,10 @@ class HomeScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          // TODO: 빠른 상담 시작
+          context.push('/characters');
         },
         icon: const Icon(Icons.mic),
-        label: const Text('빠른 상담'),
+        label: const Text('AI 주치의 선택'),
       ),
     );
   }

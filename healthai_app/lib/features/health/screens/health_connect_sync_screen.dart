@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io' show Platform;
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/common_widgets.dart';
+import '../../../core/api/api_client.dart';
 import '../services/health_connect_service.dart';
 import '../providers/healthkit_provider.dart';
 import '../../family/providers/family_provider.dart';
+import '../../family/models/family_profile_model.dart';
 
 class HealthConnectSyncScreen extends ConsumerStatefulWidget {
   const HealthConnectSyncScreen({super.key});
@@ -159,7 +161,7 @@ class _HealthConnectSyncScreenState
     );
   }
 
-  Widget _buildProfileList(List<FamilyProfile> profiles) {
+  Widget _buildProfileList(List<FamilyProfileModel> profiles) {
     if (profiles.isEmpty) {
       return const CustomCard(
         child: Text('가족 프로필을 먼저 추가해주세요'),
@@ -176,7 +178,7 @@ class _HealthConnectSyncScreenState
     );
   }
 
-  Widget _buildProfileCard(FamilyProfile profile) {
+  Widget _buildProfileCard(FamilyProfileModel profile) {
     return CustomCard(
       child: ListTile(
         leading: ProfileAvatar(
@@ -185,7 +187,7 @@ class _HealthConnectSyncScreenState
           size: 40,
         ),
         title: Text(profile.name),
-        subtitle: Text('${profile.age}세, ${profile.gender}'),
+        subtitle: Text(profile.relationship),
         trailing: _isSyncing
             ? const SizedBox(
                 width: 24,

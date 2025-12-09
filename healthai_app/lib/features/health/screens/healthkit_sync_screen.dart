@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/common_widgets.dart';
 import '../providers/healthkit_provider.dart';
 import '../../family/providers/family_provider.dart';
+import '../../family/models/family_profile_model.dart';
 
 class HealthKitSyncScreen extends ConsumerStatefulWidget {
   const HealthKitSyncScreen({super.key});
@@ -86,7 +87,7 @@ class _HealthKitSyncScreenState extends ConsumerState<HealthKitSyncScreen> {
     );
   }
 
-  Widget _buildProfileList(List<FamilyProfile> profiles) {
+  Widget _buildProfileList(List<FamilyProfileModel> profiles) {
     if (profiles.isEmpty) {
       return const CustomCard(
         child: Text('가족 프로필을 먼저 추가해주세요'),
@@ -103,7 +104,7 @@ class _HealthKitSyncScreenState extends ConsumerState<HealthKitSyncScreen> {
     );
   }
 
-  Widget _buildProfileCard(FamilyProfile profile) {
+  Widget _buildProfileCard(FamilyProfileModel profile) {
     return CustomCard(
       child: ListTile(
         leading: ProfileAvatar(
@@ -112,7 +113,7 @@ class _HealthKitSyncScreenState extends ConsumerState<HealthKitSyncScreen> {
           size: 40,
         ),
         title: Text(profile.name),
-        subtitle: Text('${profile.age}세, ${profile.gender}'),
+        subtitle: Text(profile.relationship),
         trailing: _isSyncing
             ? const SizedBox(
                 width: 24,
