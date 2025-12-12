@@ -39,7 +39,20 @@ class ConversationModel {
   }
 }
 
-/// Transcript 메시지 모델
+/// Conversation 메시지 모델 (화면에 표시되는 완료된 메시지)
+class ConversationMessage {
+  final String text;
+  final bool isUser;
+  final DateTime timestamp;
+
+  ConversationMessage({
+    required this.text,
+    required this.isUser,
+    required this.timestamp,
+  });
+}
+
+/// Transcript 메시지 모델 (실시간 스트리밍 델타)
 class TranscriptMessage {
   final String text;
   final bool isUser;
@@ -53,9 +66,11 @@ class TranscriptMessage {
 
   factory TranscriptMessage.fromJson(Map<String, dynamic> json) {
     return TranscriptMessage(
-      text: json['text'] as String,
-      isUser: json['is_user'] as bool,
-      timestamp: DateTime.now(),
+      text: json['text'] as String? ?? '',
+      isUser: json['is_user'] as bool? ?? false,
+      timestamp: json['timestamp'] != null
+        ? DateTime.parse(json['timestamp'] as String)
+        : DateTime.now(),
     );
   }
 
@@ -73,6 +88,7 @@ enum WebSocketEventType {
   transcript,
   error,
   sessionEnded,
+  welcomeCompleted,  // 환영 메시지 완료 이벤트
 }
 
 /// WebSocket 이벤트
@@ -96,16 +112,33 @@ class WebSocketEvent {
       case 'error':
         type = WebSocketEventType.error;
         break;
+      case 'sessionEnded':
       case 'session_ended':
         type = WebSocketEventType.sessionEnded;
+        break;
+      case 'welcome_completed':
+        type = WebSocketEventType.welcomeCompleted;
         break;
       default:
         type = WebSocketEventType.error;
     }
 
+    // 서버가 보내는 JSON 구조 처리:
+    // - 중첩 구조: {"type":"transcript", "data": {"text":"...", "is_user":true}}
+    // - 평면 구조: {"type":"transcript", "text":"...", "is_user":true}
+    Map<String, dynamic> data;
+    if (json.containsKey('data')) {
+      // 중첩 구조 (미래 호환성)
+      data = json['data'] as Map<String, dynamic>;
+    } else {
+      // 평면 구조 (현재 서버 응답) - 'type' 키를 제외한 모든 데이터
+      data = Map<String, dynamic>.from(json);
+      data.remove('type');
+    }
+
     return WebSocketEvent(
       type: type,
-      data: json,
+      data: data,
     );
   }
 }

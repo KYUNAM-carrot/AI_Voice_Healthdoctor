@@ -69,7 +69,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'voice-conversation',
         builder: (context, state) {
           final characterId = state.pathParameters['characterId']!;
-          return VoiceConversationScreen(characterId: characterId);
+          final characterName = state.uri.queryParameters['name'] ?? '의사 선생님';
+          return VoiceConversationScreen(
+            characterId: characterId,
+            characterName: characterName,
+          );
         },
       ),
     ],

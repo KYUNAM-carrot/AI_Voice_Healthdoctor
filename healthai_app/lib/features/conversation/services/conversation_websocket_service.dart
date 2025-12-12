@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../models/conversation_model.dart';
+import '../../../core/config/api_config.dart';
 
 /// WebSocket 기반 Conversation Service
 /// OpenAI Realtime API와 통신하는 백엔드 WebSocket에 연결
@@ -14,6 +15,8 @@ class ConversationWebSocketService {
       StreamController<Uint8List>.broadcast();
   final StreamController<String> _errorController =
       StreamController<String>.broadcast();
+  final StreamController<bool> _welcomeCompletedController =
+      StreamController<bool>.broadcast();
 
   bool _isConnected = false;
 
@@ -26,6 +29,9 @@ class ConversationWebSocketService {
 
   /// 에러 스트림
   Stream<String> get errorStream => _errorController.stream;
+
+  /// 환영 메시지 완료 스트림
+  Stream<bool> get welcomeCompletedStream => _welcomeCompletedController.stream;
 
   /// 연결 상태
   bool get isConnected => _isConnected;
@@ -71,33 +77,43 @@ class ConversationWebSocketService {
     try {
       if (message is String) {
         // JSON 텍스트 메시지 (Transcript, 에러 등)
+        print('📨 수신한 텍스트 메시지: $message');
         final data = json.decode(message);
         final event = WebSocketEvent.fromJson(data);
+        print('📋 이벤트 타입: ${event.type}');
 
         switch (event.type) {
           case WebSocketEventType.transcript:
             final transcriptMsg = TranscriptMessage.fromJson(event.data);
+            print('💬 Transcript 추가: ${transcriptMsg.text} (is_user: ${transcriptMsg.isUser})');
             _transcriptController.add(transcriptMsg);
             break;
 
           case WebSocketEventType.error:
             final errorMessage = event.data['message'] as String? ?? 'Unknown error';
+            print('❌ 에러 메시지: $errorMessage');
             _errorController.add(errorMessage);
             break;
 
           case WebSocketEventType.sessionEnded:
             final summary = event.data['summary'] as String?;
-            print('세션 종료: $summary');
+            print('🔚 세션 종료: $summary');
             disconnect();
+            break;
+
+          case WebSocketEventType.welcomeCompleted:
+            print('✅ 환영 메시지 완료 - 마이크 활성화');
+            _welcomeCompletedController.add(true);
             break;
         }
       } else if (message is List<int>) {
         // Binary 메시지 (오디오 델타)
         final audioBytes = Uint8List.fromList(message);
+        print('🎵 오디오 데이터 수신: ${audioBytes.length} bytes');
         _audioController.add(audioBytes);
       }
     } catch (e) {
-      print('메시지 처리 오류: $e');
+      print('⚠️ 메시지 처리 오류: $e');
       _errorController.add('메시지 처리 오류: $e');
     }
   }
@@ -112,11 +128,12 @@ class ConversationWebSocketService {
     }
 
     // Binary 메시지로 전송
+    print('📤 Sending user audio to WebSocket: ${audioData.length} bytes');
     _channel!.sink.add(audioData);
   }
 
   /// 세션 종료 요청
-  void endSession() {
+  Future<void> endSession() async {
     if (!_isConnected || _channel == null) {
       print('WebSocket 연결되지 않음 - 세션 종료 불가');
       return;
@@ -145,5 +162,6 @@ class ConversationWebSocketService {
     _transcriptController.close();
     _audioController.close();
     _errorController.close();
+    _welcomeCompletedController.close();
   }
 }

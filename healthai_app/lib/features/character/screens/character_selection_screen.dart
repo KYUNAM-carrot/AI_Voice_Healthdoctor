@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:io';
 import '../../../core/models/character_model.dart';
 import '../../../core/services/character_api_service.dart';
@@ -165,10 +166,9 @@ class _CharacterSelectionScreenState extends State<CharacterSelectionScreen> {
       child: InkWell(
         onTap: () {
           // 캐릭터 선택 시 음성 상담 화면으로 이동
-          Navigator.pushNamed(
-            context,
-            '/voice-conversation/${character.id}',
-          );
+          // 이름과 전문분야를 함께 전달 (전문의 접미사 추가)
+          final displayName = '${character.name} ${_formatSpecialty(character.specialty)}';
+          context.push('/voice-conversation/${character.id}?name=${Uri.encodeComponent(displayName)}');
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -323,5 +323,23 @@ class _CharacterSelectionScreenState extends State<CharacterSelectionScreen> {
 
   Color _getGenderColor(String gender) {
     return gender == 'male' ? Colors.blue : Colors.pink;
+  }
+
+  /// 전문분야를 표시용 포맷으로 변환 (전문의 접미사 추가)
+  String _formatSpecialty(String specialty) {
+    // 이미 "전문의"가 포함된 경우 그대로 반환
+    if (specialty.contains('전문의')) {
+      return specialty;
+    }
+    // "임상영양사"는 그대로 사용
+    if (specialty.contains('영양사')) {
+      return specialty;
+    }
+    // "노인의학" -> "노인의학과 전문의"
+    if (specialty == '노인의학') {
+      return '노인의학과 전문의';
+    }
+    // "내과", "정신건강의학과", "소아청소년과" 등 -> "~ 전문의"
+    return '$specialty 전문의';
   }
 }

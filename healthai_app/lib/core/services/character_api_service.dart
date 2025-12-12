@@ -1,13 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/character_model.dart';
+import '../config/api_config.dart';
 
 /// 캐릭터 API 서비스
 class CharacterApiService {
-  // 로컬 테스트 서버
-  // Android 에뮬레이터: 10.0.2.2 = 호스트 PC의 localhost
-  // iOS 시뮬레이터/실제 기기: localhost 또는 PC IP 주소
-  static const String baseUrl = 'http://10.0.2.2:8002';
+  // Core API 베이스 URL (port 8002)
+  static String get baseUrl => ApiConfig.baseUrl.replaceFirst('8004', '8002');
 
   /// 모든 캐릭터 조회
   Future<List<CharacterModel>> getAllCharacters() async {
