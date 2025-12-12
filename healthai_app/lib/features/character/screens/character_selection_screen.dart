@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:io';
 import '../../../core/models/character_model.dart';
 import '../../../core/services/character_api_service.dart';
 
@@ -287,36 +286,31 @@ class _CharacterSelectionScreenState extends State<CharacterSelectionScreen> {
   }
 
   Widget _buildCharacterAvatar(CharacterModel character) {
-    // Lottie 파일이 로컬에 있는 경우
-    if (character.lottieAnimationUrl != null &&
-        character.lottieAnimationUrl!.startsWith('file://')) {
-      final filePath =
-          character.lottieAnimationUrl!.replaceFirst('file://', '');
+    // 로컬 assets에서 Lottie 파일 로드
+    final lottieAssetPath = 'assets/lottie/${character.id}.json';
 
-      if (File(filePath).existsSync()) {
-        return SizedBox(
-          width: 80,
-          height: 80,
-          child: Lottie.file(
-            File(filePath),
-            fit: BoxFit.contain,
-          ),
-        );
-      }
-    }
-
-    // Lottie 없으면 기본 아이콘
-    return Container(
+    return SizedBox(
       width: 80,
       height: 80,
-      decoration: BoxDecoration(
-        color: _getGenderColor(character.gender).withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(
-        Icons.person,
-        size: 40,
-        color: _getGenderColor(character.gender),
+      child: Lottie.asset(
+        lottieAssetPath,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          // Lottie 로드 실패 시 기본 아이콘 표시
+          return Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: _getGenderColor(character.gender).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.person,
+              size: 40,
+              color: _getGenderColor(character.gender),
+            ),
+          );
+        },
       ),
     );
   }

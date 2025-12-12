@@ -10,6 +10,8 @@ import '../../features/family/screens/family_list_screen.dart';
 import '../../features/conversation/screens/conversation_screen.dart';
 import '../../features/conversation/screens/voice_conversation_screen.dart';
 import '../../features/character/screens/character_selection_screen.dart';
+import '../../features/routine/screens/morning_routine_screen.dart';
+import '../../features/routine/screens/gratitude_diary_screen.dart';
 
 // Router configuration
 final routerProvider = Provider<GoRouter>((ref) {
@@ -55,6 +57,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/characters',
         name: 'characters',
         builder: (context, state) => const CharacterSelectionScreen(),
+      ),
+      GoRoute(
+        path: '/routine',
+        name: 'routine',
+        builder: (context, state) => const MorningRoutineScreen(),
+      ),
+      GoRoute(
+        path: '/gratitude',
+        name: 'gratitude',
+        builder: (context, state) => const GratitudeDiaryScreen(),
       ),
       GoRoute(
         path: '/conversation/:characterId',
