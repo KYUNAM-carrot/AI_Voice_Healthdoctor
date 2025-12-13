@@ -4,28 +4,29 @@
 import 'dart:io';
 
 class ApiConfig {
-  /// 백엔드 서버 베이스 URL
-  ///
-  /// - 에뮬레이터: 10.0.2.2 (localhost 매핑)
-  /// - 실제 기기: 192.168.35.217 (PC의 로컬 IP)
-  static String get baseUrl {
-    // Android 에뮬레이터 감지
-    // 에뮬레이터는 "Android SDK built for x86" 또는 "sdk_gphone" 같은 모델명을 가짐
+  /// 호스트 주소 (포트 제외)
+  static String get _host {
     final isEmulator = Platform.environment.containsKey('ANDROID_EMULATOR') ||
         Platform.isAndroid && _isAndroidEmulator();
 
     if (isEmulator) {
-      // 에뮬레이터: localhost는 10.0.2.2로 매핑됨
-      return 'http://10.0.2.2:8004';
+      return '10.0.2.2';
     } else {
-      // 실제 기기: PC의 로컬 네트워크 IP 사용
-      return 'http://192.168.35.217:8004';
+      return '192.168.35.217';
     }
   }
 
-  /// WebSocket URL
+  /// Core API 베이스 URL (인증, 사용자, 루틴 등)
+  /// 포트: 8002
+  static String get baseUrl => 'http://$_host:8002';
+
+  /// Conversation Service 베이스 URL (음성 상담)
+  /// 포트: 8004
+  static String get conversationBaseUrl => 'http://$_host:8004';
+
+  /// WebSocket URL (Conversation Service)
   static String get websocketBaseUrl {
-    return baseUrl.replaceFirst('http://', 'ws://');
+    return conversationBaseUrl.replaceFirst('http://', 'ws://');
   }
 
   /// Android 에뮬레이터 여부 확인 (간단한 휴리스틱)
@@ -38,11 +39,21 @@ class ApiConfig {
     }
   }
 
-  // API 엔드포인트들
-  static String get charactersEndpoint => '$baseUrl/characters';
-  static String characterEndpoint(String characterId) => '$baseUrl/characters/$characterId';
+  // Conversation Service 엔드포인트 (캐릭터, 음성상담)
+  static String get charactersEndpoint => '$conversationBaseUrl/characters';
+  static String characterEndpoint(String characterId) => '$conversationBaseUrl/characters/$characterId';
   static String welcomeAudioEndpoint(String characterId) =>
-      '$baseUrl/characters/$characterId/welcome-audio';
+      '$conversationBaseUrl/characters/$characterId/welcome-audio';
+
+  // Routine 엔드포인트
+  static String get routinesEndpoint => '$baseUrl/api/v1/routines';
+  static String get routineItemsEndpoint => '$routinesEndpoint/items';
+  static String get todayRoutineEndpoint => '$routinesEndpoint/today';
+  static String routineByDateEndpoint(String date) => '$routinesEndpoint/$date';
+  static String get weeklyStatsEndpoint => '$routinesEndpoint/stats/weekly';
+  static String monthlyStatsEndpoint(int year, int month) =>
+      '$routinesEndpoint/stats/monthly?year=$year&month=$month';
+  static String routineByIdEndpoint(String checkId) => '$routinesEndpoint/$checkId';
 
   // WebSocket 엔드포인트
   static String conversationWebSocket(String conversationId) =>
