@@ -14,6 +14,9 @@ final scheduleCompletionProvider = StateNotifierProvider<ScheduleCompletionNotif
   return ScheduleCompletionNotifier();
 });
 
+/// 목표 완료 상태 Provider
+final goalCompletionProvider = StateProvider<bool>((ref) => false);
+
 class GratitudeItemsNotifier extends StateNotifier<List<String>> {
   GratitudeItemsNotifier() : super(['', '', '']); // 기본 3개 항목
 
@@ -150,8 +153,36 @@ class _GratitudeDiaryScreenState extends ConsumerState<GratitudeDiaryScreen> {
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text('감사일기'),
-        centerTitle: false,
+        titleSpacing: 0,
+        title: Transform.translate(
+          offset: const Offset(-16, 0),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.primaryGradient,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.auto_stories,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                '감사일기 작성 및 실행체크',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppTheme.spaceLg),
@@ -185,6 +216,19 @@ class _GratitudeDiaryScreenState extends ConsumerState<GratitudeDiaryScreen> {
               ),
             ),
             const SizedBox(height: AppTheme.spaceXl),
+
+            // 오늘 반드시 이룰 목표 실행 체크 섹션
+            routineAsync.when(
+              data: (routine) {
+                final goal = routine.todayGoal;
+                if (goal == null || goal.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                return _buildGoalCheckSection(goal);
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
 
             // 오늘 일정 실행 체크 섹션
             routineAsync.when(
@@ -292,6 +336,104 @@ class _GratitudeDiaryScreenState extends ConsumerState<GratitudeDiaryScreen> {
     return Text(
       '${dateFormat.format(now)} 감사일기',
       style: AppTheme.h3,
+    );
+  }
+
+  /// 오늘 반드시 이룰 목표 체크 섹션
+  Widget _buildGoalCheckSection(String goal) {
+    final isCompleted = ref.watch(goalCompletionProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text('🎯', style: TextStyle(fontSize: 18)),
+            const SizedBox(width: 8),
+            const Text('오늘 반드시 이룰 목표', style: AppTheme.h3),
+          ],
+        ),
+        const SizedBox(height: AppTheme.spaceSm),
+        InkWell(
+          onTap: () {
+            ref.read(goalCompletionProvider.notifier).state = !isCompleted;
+          },
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          child: Container(
+            padding: const EdgeInsets.all(AppTheme.spaceMd),
+            decoration: BoxDecoration(
+              color: isCompleted
+                  ? AppTheme.success.withOpacity(0.1)
+                  : AppTheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              border: Border.all(
+                color: isCompleted
+                    ? AppTheme.success
+                    : Colors.grey.shade200,
+                width: isCompleted ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                // 체크박스
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: isCompleted ? AppTheme.success : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isCompleted ? AppTheme.success : Colors.grey.shade400,
+                      width: 2,
+                    ),
+                  ),
+                  child: isCompleted
+                      ? const Icon(Icons.check, size: 18, color: Colors.white)
+                      : null,
+                ),
+                const SizedBox(width: AppTheme.spaceMd),
+                // 목표 텍스트
+                Expanded(
+                  child: Text(
+                    goal,
+                    style: AppTheme.bodyMedium.copyWith(
+                      decoration: isCompleted ? TextDecoration.lineThrough : null,
+                      color: isCompleted ? AppTheme.textTertiary : AppTheme.textPrimary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                // 완료 상태 표시
+                if (isCompleted)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppTheme.success,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.celebration, size: 14, color: Colors.white),
+                        SizedBox(width: 4),
+                        Text(
+                          '달성!',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: AppTheme.spaceXl),
+      ],
     );
   }
 

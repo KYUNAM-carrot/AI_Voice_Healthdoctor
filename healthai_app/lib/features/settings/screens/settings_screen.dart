@@ -1,21 +1,30 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/common_widgets.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../providers/profile_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('설정 및 화면 테스트'),
+        title: const Text('설정'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(AppTheme.spaceMd),
         children: [
+          // 내 프로필 섹션
+          _buildProfileSection(context, ref, user),
+          const SizedBox(height: AppTheme.spaceLg),
+
           // 구독 관리
           _buildSection(
             context,
@@ -24,7 +33,7 @@ class SettingsScreen extends ConsumerWidget {
               _SettingsItem(
                 icon: Icons.card_membership,
                 title: '구독 플랜 관리',
-                subtitle: 'RevenueCat 구독 화면',
+                subtitle: _getSubscriptionLabel(user?.subscriptionTier ?? 'free'),
                 onTap: () => context.push('/subscription'),
               ),
             ],
@@ -43,16 +52,10 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () => context.push('/families'),
               ),
               _SettingsItem(
-                icon: Icons.chat_bubble_outline,
-                title: 'AI 상담 (최현우 의사)',
-                subtitle: '의사와 건강 상담',
-                onTap: () => context.push('/conversation/choi_hyunwoo'),
-              ),
-              _SettingsItem(
-                icon: Icons.psychology_outlined,
-                title: 'AI 상담 (정유진 상담사)',
-                subtitle: '정신건강 상담',
-                onTap: () => context.push('/conversation/jung_yujin'),
+                icon: Icons.smart_toy_outlined,
+                title: 'AI 주치의 선택',
+                subtitle: '건강 상담 시작하기',
+                onTap: () => context.push('/characters'),
               ),
             ],
           ),
@@ -93,12 +96,134 @@ class SettingsScreen extends ConsumerWidget {
               _SettingsItem(
                 icon: Icons.info_outline,
                 title: '버전 정보',
-                subtitle: 'v1.0.0 (Day 43-52 구현)',
+                subtitle: 'v1.0.0',
+                onTap: () {},
+              ),
+              _SettingsItem(
+                icon: Icons.description_outlined,
+                title: '이용약관',
+                subtitle: '서비스 이용약관 확인',
+                onTap: () {},
+              ),
+              _SettingsItem(
+                icon: Icons.privacy_tip_outlined,
+                title: '개인정보 처리방침',
+                subtitle: '개인정보 보호 정책',
                 onTap: () {},
               ),
             ],
           ),
+          const SizedBox(height: AppTheme.spaceLg),
+
+          // 관리자 메뉴 (관리자만 표시)
+          _buildAdminSection(context, ref),
+
+          // 로그아웃 버튼
+          _buildLogoutButton(context, ref),
+          const SizedBox(height: AppTheme.spaceMd),
         ],
+      ),
+    );
+  }
+
+  /// 내 프로필 섹션
+  Widget _buildProfileSection(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic user,
+  ) {
+    // 로컬에 저장된 프로필 이미지 확인
+    final profileData = user != null ? ref.watch(profileProvider(user.userId)) : null;
+    final localImagePath = profileData?.profileImagePath;
+    final hasLocalImage = localImagePath != null && File(localImagePath).existsSync();
+
+    // 이미지 Provider 결정 (로컬 이미지 우선)
+    ImageProvider? imageProvider;
+    if (hasLocalImage) {
+      imageProvider = FileImage(File(localImagePath));
+    } else if (user?.profileImageUrl != null) {
+      imageProvider = NetworkImage(user!.profileImageUrl!);
+    }
+
+    return CustomCard(
+      child: InkWell(
+        onTap: () => context.push('/profile'),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        child: Padding(
+          padding: const EdgeInsets.all(AppTheme.spaceMd),
+          child: Row(
+            children: [
+              // 프로필 이미지
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: AppTheme.primary.withOpacity(0.2),
+                backgroundImage: imageProvider,
+                child: imageProvider == null
+                    ? Text(
+                        user?.name.isNotEmpty == true
+                            ? user!.name[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primary,
+                        ),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: AppTheme.spaceMd),
+
+              // 사용자 정보
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user?.name ?? '사용자',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      user?.email ?? '이메일 없음',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getSubscriptionColor(user?.subscriptionTier ?? 'free'),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _getSubscriptionLabel(user?.subscriptionTier ?? 'free'),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // 편집 아이콘
+              const Icon(
+                Icons.chevron_right,
+                color: AppTheme.textSecondary,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -149,6 +274,116 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  /// 관리자 섹션 (관리자만 표시)
+  Widget _buildAdminSection(BuildContext context, WidgetRef ref) {
+    final isAdminAsync = ref.watch(isAdminProvider);
+
+    return isAdminAsync.when(
+      data: (isAdmin) {
+        if (!isAdmin) {
+          return const SizedBox.shrink(); // 관리자가 아니면 표시하지 않음
+        }
+        return Column(
+          children: [
+            _buildSection(
+              context,
+              title: '관리자',
+              items: [
+                _SettingsItem(
+                  icon: Icons.admin_panel_settings,
+                  title: '관리자 대시보드',
+                  subtitle: '회원 및 탈퇴 관리',
+                  onTap: () => context.push('/admin'),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppTheme.spaceLg),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  /// 로그아웃 버튼
+  Widget _buildLogoutButton(BuildContext context, WidgetRef ref) {
+    return CustomCard(
+      padding: EdgeInsets.zero,
+      child: ListTile(
+        leading: const Icon(
+          Icons.logout,
+          color: Colors.red,
+        ),
+        title: const Text(
+          '로그아웃',
+          style: TextStyle(
+            color: Colors.red,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        onTap: () => _showLogoutDialog(context, ref),
+      ),
+    );
+  }
+
+  /// 로그아웃 확인 다이얼로그
+  Future<void> _showLogoutDialog(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('로그아웃'),
+        content: const Text('정말 로그아웃 하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('로그아웃'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref.read(authStateProvider.notifier).logout();
+      // 로그아웃 후 로그인 페이지로 이동 (router redirect가 자동 처리)
+    }
+  }
+
+  String _getSubscriptionLabel(String tier) {
+    switch (tier) {
+      case 'free':
+        return '무료';
+      case 'basic':
+        return '베이직';
+      case 'premium':
+        return '프리미엄';
+      case 'family':
+        return '패밀리';
+      default:
+        return tier;
+    }
+  }
+
+  Color _getSubscriptionColor(String tier) {
+    switch (tier) {
+      case 'free':
+        return Colors.grey;
+      case 'basic':
+        return Colors.blue;
+      case 'premium':
+        return Colors.purple;
+      case 'family':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
   }
 }
 

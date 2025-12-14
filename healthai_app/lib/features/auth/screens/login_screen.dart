@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/auth_model.dart';
 import '../providers/auth_provider.dart';
+import '../services/auth_service.dart';
 
 /// 로그인 화면
 class LoginScreen extends ConsumerWidget {
@@ -62,6 +63,11 @@ class LoginScreen extends ConsumerWidget {
 
                 // 소셜 로그인 버튼들
                 _buildSocialLoginButtons(context, ref, authState),
+
+                const SizedBox(height: 24),
+
+                // 테스트 계정 로그인 (개발용)
+                _buildTestAccountSection(context, ref, authState),
 
                 const SizedBox(height: 24),
 
@@ -158,6 +164,60 @@ class LoginScreen extends ConsumerWidget {
           ),
       ],
     );
+  }
+
+  Widget _buildTestAccountSection(
+    BuildContext context,
+    WidgetRef ref,
+    AuthState authState,
+  ) {
+    final isLoading = authState is AuthStateLoading;
+    final theme = Theme.of(context);
+
+    return Column(
+      children: [
+        // 구분선
+        Row(
+          children: [
+            const Expanded(child: Divider()),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                '또는 테스트 계정으로 로그인',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const Expanded(child: Divider()),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // 테스트 계정 선택 버튼들
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          children: testUsers.map((user) {
+            return _TestAccountChip(
+              user: user,
+              onTap: isLoading
+                  ? null
+                  : () => _loginWithTestAccount(ref, user),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  void _loginWithTestAccount(WidgetRef ref, TestUser user) {
+    ref.read(authStateProvider.notifier).loginWithTestAccount(
+          user.username,
+          user.password,
+        );
   }
 
   Widget _buildTermsText(ThemeData theme) {
@@ -314,4 +374,125 @@ class _ProviderConfig {
     required this.label,
     required this.hasBorder,
   });
+}
+
+/// 테스트 계정 선택 칩
+class _TestAccountChip extends StatelessWidget {
+  final TestUser user;
+  final VoidCallback? onTap;
+
+  const _TestAccountChip({
+    required this.user,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final chipColor = _getChipColor();
+
+    return Material(
+      color: chipColor.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            border: Border.all(color: chipColor.withOpacity(0.5)),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 아이콘
+              Icon(
+                _getIcon(),
+                size: 18,
+                color: chipColor,
+              ),
+              const SizedBox(width: 8),
+              // 라벨
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    user.name,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: chipColor,
+                    ),
+                  ),
+                  Text(
+                    _getSubscriptionLabel(),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: chipColor.withOpacity(0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getChipColor() {
+    if (user.isAdmin) {
+      return Colors.red;
+    }
+    switch (user.subscriptionTier) {
+      case 'free':
+        return Colors.grey;
+      case 'basic':
+        return Colors.blue;
+      case 'premium':
+        return Colors.purple;
+      case 'family':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getIcon() {
+    if (user.isAdmin) {
+      return Icons.admin_panel_settings;
+    }
+    switch (user.subscriptionTier) {
+      case 'free':
+        return Icons.person_outline;
+      case 'basic':
+        return Icons.person;
+      case 'premium':
+        return Icons.star;
+      case 'family':
+        return Icons.family_restroom;
+      default:
+        return Icons.person;
+    }
+  }
+
+  String _getSubscriptionLabel() {
+    if (user.isAdmin) {
+      return '관리자';
+    }
+    switch (user.subscriptionTier) {
+      case 'free':
+        return '무료';
+      case 'basic':
+        return '베이직';
+      case 'premium':
+        return '프리미엄';
+      case 'family':
+        return '패밀리';
+      default:
+        return user.subscriptionTier;
+    }
+  }
 }

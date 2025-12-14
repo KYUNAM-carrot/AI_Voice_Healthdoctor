@@ -10,12 +10,16 @@ import '../../features/settings/screens/settings_screen.dart';
 import '../../features/family/screens/family_list_screen.dart';
 import '../../features/conversation/screens/conversation_screen.dart';
 import '../../features/conversation/screens/voice_conversation_screen.dart';
+import '../../features/conversation/screens/conversation_history_screen.dart';
+import '../../features/conversation/screens/conversation_history_detail_screen.dart';
 import '../../features/character/screens/character_selection_screen.dart';
 import '../../features/routine/screens/morning_routine_screen.dart';
 import '../../features/routine/screens/gratitude_diary_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/models/auth_model.dart';
+import '../../features/settings/screens/profile_edit_screen.dart';
+import '../../features/admin/screens/admin_dashboard_screen.dart';
 
 // Router configuration with authentication
 final routerProvider = Provider<GoRouter>((ref) {
@@ -83,6 +87,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
+        path: '/profile',
+        name: 'profile',
+        builder: (context, state) => const ProfileEditScreen(),
+      ),
+      GoRoute(
+        path: '/admin',
+        name: 'admin',
+        builder: (context, state) => const AdminDashboardScreen(),
+      ),
+      GoRoute(
         path: '/families',
         name: 'families',
         builder: (context, state) => const FamilyListScreen(),
@@ -103,6 +117,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const GratitudeDiaryScreen(),
       ),
       GoRoute(
+        path: '/conversation-history',
+        name: 'conversation-history',
+        builder: (context, state) => const ConversationHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/conversation-history/:id',
+        name: 'conversation-history-detail',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ConversationHistoryDetailScreen(conversationId: id);
+        },
+      ),
+      GoRoute(
         path: '/conversation/:characterId',
         name: 'conversation',
         builder: (context, state) {
@@ -116,9 +143,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final characterId = state.pathParameters['characterId']!;
           final characterName = state.uri.queryParameters['name'] ?? '의사 선생님';
+          final familyProfileId = state.uri.queryParameters['profileId'];
+          final familyProfileName = state.uri.queryParameters['profileName'];
           return VoiceConversationScreen(
             characterId: characterId,
             characterName: characterName,
+            familyProfileId: familyProfileId,
+            familyProfileName: familyProfileName,
           );
         },
       ),

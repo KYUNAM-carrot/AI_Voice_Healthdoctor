@@ -8,6 +8,77 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../models/auth_model.dart';
 import '../../../core/config/api_config.dart';
 
+/// 테스트 사용자 목록
+class TestUser {
+  final String id;
+  final String username;
+  final String password;
+  final String name;
+  final String email;
+  final String subscriptionTier;
+  final bool isAdmin;
+
+  const TestUser({
+    required this.id,
+    required this.username,
+    required this.password,
+    required this.name,
+    required this.email,
+    required this.subscriptionTier,
+    this.isAdmin = false,
+  });
+}
+
+/// 테스트 계정 목록
+const List<TestUser> testUsers = [
+  // 관리자 계정
+  TestUser(
+    id: 'admin_001',
+    username: 'admin',
+    password: 'admin5942#',
+    name: '관리자',
+    email: 'admin@healthai.com',
+    subscriptionTier: 'premium',
+    isAdmin: true,
+  ),
+  // 무료 플랜 사용자
+  TestUser(
+    id: 'test_free_001',
+    username: 'free_user',
+    password: 'test1234',
+    name: '김무료',
+    email: 'free@test.com',
+    subscriptionTier: 'free',
+  ),
+  // 베이직 플랜 사용자
+  TestUser(
+    id: 'test_basic_001',
+    username: 'basic_user',
+    password: 'test1234',
+    name: '이베이직',
+    email: 'basic@test.com',
+    subscriptionTier: 'basic',
+  ),
+  // 프리미엄 플랜 사용자
+  TestUser(
+    id: 'test_premium_001',
+    username: 'premium_user',
+    password: 'test1234',
+    name: '박프리미엄',
+    email: 'premium@test.com',
+    subscriptionTier: 'premium',
+  ),
+  // 패밀리 플랜 사용자
+  TestUser(
+    id: 'test_family_001',
+    username: 'family_user',
+    password: 'test1234',
+    name: '최패밀리',
+    email: 'family@test.com',
+    subscriptionTier: 'family',
+  ),
+];
+
 /// 인증 서비스
 class AuthService {
   final Dio _dio;
@@ -17,6 +88,7 @@ class AuthService {
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userKey = 'user_data';
+  static const String _isAdminKey = 'is_admin';
 
   // Google OAuth Client IDs (Google Cloud Console에서 발급)
   // Web Client ID (백엔드 토큰 검증용)
@@ -267,8 +339,10 @@ class AuthService {
       return UserModel(
         userId: parts[0],
         name: parts[1],
-        email: parts.length > 2 ? parts[2] : null,
-        profileImageUrl: parts.length > 3 ? parts[3] : null,
+        email: parts.length > 2 && parts[2].isNotEmpty ? parts[2] : null,
+        profileImageUrl: parts.length > 3 && parts[3].isNotEmpty ? parts[3] : null,
+        subscriptionTier: parts.length > 4 && parts[4].isNotEmpty ? parts[4] : 'free',
+        subscriptionStatus: parts.length > 5 && parts[5].isNotEmpty ? parts[5] : 'active',
       );
     } catch (e) {
       debugPrint('Get saved user error: $e');
@@ -313,6 +387,118 @@ class AuthService {
     return accessToken != null;
   }
 
+  /// 테스트 계정으로 로그인 (개발용)
+  Future<AuthTokens> loginWithTestAccount(String username, String password) async {
+    try {
+      // 백엔드 테스트 로그인 API 호출
+      final response = await _dio.post(
+        '/api/v1/auth/login/test',
+        data: {
+          'username': username,
+          'password': password,
+        },
+      );
+
+      final data = response.data;
+      final tokens = AuthTokens(
+        accessToken: data['access_token'],
+        refreshToken: data['refresh_token'],
+        tokenType: data['token_type'] ?? 'bearer',
+      );
+
+      // 토큰 저장
+      await saveTokens(tokens);
+
+      // 사용자 정보 저장
+      if (data['user'] != null) {
+        await _saveUserData(data['user']);
+      }
+
+      // 관리자 여부 확인 (admin 계정인 경우)
+      final testUser = testUsers.firstWhere(
+        (user) => user.username == username,
+        orElse: () => testUsers.first,
+      );
+      await _secureStorage.write(
+        key: _isAdminKey,
+        value: testUser.isAdmin.toString(),
+      );
+
+      return tokens;
+    } on DioException catch (e) {
+      debugPrint('Test login error: ${e.response?.statusCode} - ${e.response?.data}');
+      final message = e.response?.data?['detail'] ?? '잘못된 아이디 또는 비밀번호입니다.';
+      throw Exception(message);
+    }
+  }
+
+  /// 관리자 여부 확인
+  Future<bool> isAdmin() async {
+    final isAdmin = await _secureStorage.read(key: _isAdminKey);
+    return isAdmin == 'true';
+  }
+
+  /// 테스트 사용자 정보 가져오기
+  Future<UserModel?> getTestUser(String userId) async {
+    try {
+      final testUser = testUsers.firstWhere(
+        (user) => user.id == userId,
+        orElse: () => throw Exception('User not found'),
+      );
+
+      return UserModel(
+        userId: testUser.id,
+        name: testUser.name,
+        email: testUser.email,
+        subscriptionTier: testUser.subscriptionTier,
+        subscriptionStatus: 'active',
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// 사용자 이름 업데이트
+  Future<void> updateUserName(String name) async {
+    try {
+      final userData = await _secureStorage.read(key: _userKey);
+      if (userData == null) return;
+
+      final parts = userData.split('|');
+      if (parts.length < 2) return;
+
+      // 이름 업데이트
+      parts[1] = name;
+
+      final updatedData = parts.join('|');
+      await _secureStorage.write(key: _userKey, value: updatedData);
+    } catch (e) {
+      debugPrint('Update user name error: $e');
+    }
+  }
+
+  /// 사용자 이메일 업데이트
+  Future<void> updateUserEmail(String email) async {
+    try {
+      final userData = await _secureStorage.read(key: _userKey);
+      if (userData == null) return;
+
+      final parts = userData.split('|');
+      // parts: [userId, name, email, profileImageUrl]
+      while (parts.length < 4) {
+        parts.add('');
+      }
+
+      // 이메일 업데이트
+      parts[2] = email;
+
+      final updatedData = parts.join('|');
+      await _secureStorage.write(key: _userKey, value: updatedData);
+    } catch (e) {
+      debugPrint('Update user email error: $e');
+    }
+  }
+
   /// 사용자 데이터 저장
   Future<void> _saveUserData(Map<String, dynamic> userData) async {
     final dataString = [
@@ -320,6 +506,8 @@ class AuthService {
       userData['name'] ?? '',
       userData['email'] ?? '',
       userData['profile_image_url'] ?? '',
+      userData['subscription_tier'] ?? 'free',
+      userData['subscription_status'] ?? 'active',
     ].join('|');
 
     await _secureStorage.write(key: _userKey, value: dataString);
@@ -330,5 +518,6 @@ class AuthService {
     await _secureStorage.delete(key: _accessTokenKey);
     await _secureStorage.delete(key: _refreshTokenKey);
     await _secureStorage.delete(key: _userKey);
+    await _secureStorage.delete(key: _isAdminKey);
   }
 }

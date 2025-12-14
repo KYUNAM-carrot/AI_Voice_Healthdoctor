@@ -1,10 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/auth_model.dart';
 import '../services/auth_service.dart';
+import '../services/user_service.dart';
 
 /// AuthService Provider
 final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService();
+});
+
+/// UserService Provider
+final userServiceProvider = Provider<UserService>((ref) {
+  return UserService();
 });
 
 /// 인증 상태 Provider
@@ -27,6 +33,20 @@ final currentUserProvider = Provider<UserModel?>((ref) {
     authenticated: (user, tokens) => user,
     orElse: () => null,
   );
+});
+
+/// 관리자 여부 Provider
+final isAdminProvider = FutureProvider<bool>((ref) async {
+  // authState를 watch하여 로그인/로그아웃 시 자동 갱신
+  final authState = ref.watch(authStateProvider);
+
+  // 인증되지 않은 상태면 관리자 아님
+  if (authState is! AuthStateAuthenticated) {
+    return false;
+  }
+
+  final authService = ref.watch(authServiceProvider);
+  return await authService.isAdmin();
 });
 
 /// 인증 상태 관리 Notifier
@@ -141,6 +161,26 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// 테스트 계정 로그인 (개발용)
+  Future<void> loginWithTestAccount(String username, String password) async {
+    state = const AuthState.loading();
+
+    try {
+      final tokens = await _authService.loginWithTestAccount(username, password);
+
+      // 저장된 사용자 정보 가져오기 (백엔드 응답에서 저장됨)
+      final user = await _authService.getSavedUser();
+
+      if (user != null) {
+        state = AuthState.authenticated(user: user, tokens: tokens);
+      } else {
+        state = const AuthState.error('사용자 정보를 가져올 수 없습니다.');
+      }
+    } catch (e) {
+      state = AuthState.error('로그인 실패: ${e.toString()}');
+    }
+  }
+
   /// 토큰 갱신
   Future<void> refreshToken() async {
     try {
@@ -190,6 +230,39 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
   void clearError() {
     if (state is AuthStateError) {
       state = const AuthState.unauthenticated();
+    }
+  }
+
+  /// 사용자 이름/이메일 업데이트
+  Future<void> updateUserProfile({String? name, String? email}) async {
+    if (state is! AuthStateAuthenticated) return;
+
+    final currentState = state as AuthStateAuthenticated;
+
+    try {
+      if (name != null && name.isNotEmpty) {
+        await _authService.updateUserName(name);
+      }
+      if (email != null) {
+        await _authService.updateUserEmail(email);
+      }
+
+      // 상태 갱신
+      final updatedUser = UserModel(
+        userId: currentState.user.userId,
+        name: name ?? currentState.user.name,
+        email: email ?? currentState.user.email,
+        profileImageUrl: currentState.user.profileImageUrl,
+        subscriptionTier: currentState.user.subscriptionTier,
+        subscriptionStatus: currentState.user.subscriptionStatus,
+      );
+
+      state = AuthState.authenticated(
+        user: updatedUser,
+        tokens: currentState.tokens,
+      );
+    } catch (e) {
+      // 에러 발생해도 무시
     }
   }
 }

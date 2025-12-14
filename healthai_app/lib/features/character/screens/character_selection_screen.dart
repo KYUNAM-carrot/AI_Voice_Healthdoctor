@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/models/character_model.dart';
 import '../../../core/services/character_api_service.dart';
+import '../../family/widgets/family_profile_selector.dart';
 
 /// 캐릭터 선택 화면
-class CharacterSelectionScreen extends StatefulWidget {
+class CharacterSelectionScreen extends ConsumerStatefulWidget {
   const CharacterSelectionScreen({Key? key}) : super(key: key);
 
   @override
-  State<CharacterSelectionScreen> createState() =>
+  ConsumerState<CharacterSelectionScreen> createState() =>
       _CharacterSelectionScreenState();
 }
 
-class _CharacterSelectionScreenState extends State<CharacterSelectionScreen> {
+class _CharacterSelectionScreenState
+    extends ConsumerState<CharacterSelectionScreen> {
   final CharacterApiService _apiService = CharacterApiService();
   final AudioPlayer _audioPlayer = AudioPlayer();
 
@@ -87,9 +90,31 @@ class _CharacterSelectionScreenState extends State<CharacterSelectionScreen> {
     } catch (e) {
       print('오디오 재생 오류: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('오디오를 재생할 수 없습니다')),
+        const SnackBar(content: Text('오디오를 재생할 수 없습니다')),
       );
       setState(() => _playingCharacterId = null);
+    }
+  }
+
+  /// 캐릭터 선택 시 가족 프로필 선택 후 상담 시작
+  Future<void> _onCharacterSelected(CharacterModel character) async {
+    final displayName =
+        '${character.name} ${_formatSpecialty(character.specialty)}';
+
+    // 가족 프로필 선택 다이얼로그 표시
+    final selectedProfile = await showFamilyProfileSelector(
+      context: context,
+      characterName: displayName,
+    );
+
+    // 프로필이 선택되면 상담 화면으로 이동
+    if (selectedProfile != null && mounted) {
+      context.push(
+        '/voice-conversation/${character.id}'
+        '?name=${Uri.encodeComponent(displayName)}'
+        '&profileId=${selectedProfile.id}'
+        '&profileName=${Uri.encodeComponent(selectedProfile.name)}',
+      );
     }
   }
 
@@ -97,7 +122,7 @@ class _CharacterSelectionScreenState extends State<CharacterSelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI 주치의 선택'),
+        title: const Text('AI 건강주치의 선택'),
         centerTitle: true,
       ),
       body: _buildBody(),
@@ -112,7 +137,7 @@ class _CharacterSelectionScreenState extends State<CharacterSelectionScreen> {
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text('AI 주치의를 불러오는 중...'),
+            Text('AI 건강주치의를 불러오는 중...'),
           ],
         ),
       );
@@ -125,7 +150,7 @@ class _CharacterSelectionScreenState extends State<CharacterSelectionScreen> {
           children: [
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
-            Text('오류가 발생했습니다'),
+            const Text('오류가 발생했습니다'),
             const SizedBox(height: 8),
             Text(
               _error!,
@@ -158,131 +183,259 @@ class _CharacterSelectionScreenState extends State<CharacterSelectionScreen> {
 
   Widget _buildCharacterCard(CharacterModel character) {
     final isPlaying = _playingCharacterId == character.id;
+    final themeColor = _getSpecialtyColor(character.specialty);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      elevation: 4,
+      elevation: 3,
+      shadowColor: themeColor.withOpacity(0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: InkWell(
-        onTap: () {
-          // 캐릭터 선택 시 음성 상담 화면으로 이동
-          // 이름과 전문분야를 함께 전달 (전문의 접미사 추가)
-          final displayName = '${character.name} ${_formatSpecialty(character.specialty)}';
-          context.push('/voice-conversation/${character.id}?name=${Uri.encodeComponent(displayName)}');
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Lottie 애니메이션 (있으면 표시)
-              _buildCharacterAvatar(character),
-              const SizedBox(width: 16),
-
-              // 캐릭터 정보
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+        onTap: () => _onCharacterSelected(character),
+        borderRadius: BorderRadius.circular(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 상단: 프로필 헤더 (그라데이션 배경)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    themeColor.withOpacity(0.1),
+                    themeColor.withOpacity(0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: Row(
+                children: [
+                  // 프로필 이미지
+                  _buildCharacterAvatar(character),
+                  const SizedBox(width: 16),
+                  // 캐릭터 기본 정보
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          character.name,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        // 이름 + 성별 태그
+                        Row(
+                          children: [
+                            Text(
+                              character.name,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1A1A1A),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getGenderColor(character.gender),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                character.gender == 'male' ? '남성' : '여성',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(height: 6),
+                        // 전문분야 배지
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
+                            horizontal: 10,
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: _getGenderColor(character.gender),
-                            borderRadius: BorderRadius.circular(12),
+                            color: themeColor,
+                            borderRadius: BorderRadius.circular(14),
                           ),
                           child: Text(
-                            character.gender == 'male' ? '남성' : '여성',
+                            character.specialty,
                             style: const TextStyle(
                               fontSize: 12,
                               color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        // 전문분야 상세
+                        Text(
+                          character.specialtyDetail,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 하단: 자기소개 영역
+            if (character.introductionText != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 자기소개 헤더
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.format_quote_rounded,
+                          size: 20,
+                          color: themeColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '자기소개',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: themeColor,
+                          ),
+                        ),
+                        const Spacer(),
+                        // 음성 자기소개 버튼
+                        GestureDetector(
+                          onTap: () => _playIntroductionAudio(character.id),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isPlaying
+                                  ? Colors.red.shade50
+                                  : themeColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isPlaying
+                                    ? Colors.red.shade300
+                                    : themeColor.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isPlaying
+                                      ? Icons.stop_rounded
+                                      : Icons.volume_up_rounded,
+                                  size: 16,
+                                  color: isPlaying ? Colors.red : themeColor,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  isPlaying ? '정지' : '음성 듣기',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: isPlaying ? Colors.red : themeColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      character.specialty,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      character.specialtyDetail,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.school, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          '경력 ${character.experienceYears}년',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
+                    const SizedBox(height: 10),
+                    // 자기소개 텍스트
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8F9FA),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: themeColor.withOpacity(0.15),
+                          width: 1,
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    if (character.introductionText != null)
-                      Text(
+                      ),
+                      child: Text(
                         character.introductionText!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[700],
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF4A4A4A),
+                          height: 1.6,
+                          letterSpacing: -0.2,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
+                    ),
                   ],
                 ),
               ),
 
-              // 오디오 재생 버튼
-              Column(
+            // 상담 시작 버튼 힌트
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  IconButton(
-                    icon: Icon(
-                      isPlaying ? Icons.stop_circle : Icons.play_circle,
-                      size: 40,
-                      color: isPlaying ? Colors.red : Colors.blue,
-                    ),
-                    onPressed: () => _playIntroductionAudio(character.id),
+                  Icon(
+                    Icons.touch_app_outlined,
+                    size: 14,
+                    color: Colors.grey[400],
                   ),
+                  const SizedBox(width: 4),
                   Text(
-                    '자기소개',
+                    '카드를 탭하여 상담 시작',
                     style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey[600],
+                      fontSize: 12,
+                      color: Colors.grey[400],
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  /// 전문분야별 테마 컬러
+  Color _getSpecialtyColor(String specialty) {
+    if (specialty.contains('내과')) {
+      return const Color(0xFF2E7D32); // 녹색 - 내과
+    } else if (specialty.contains('정신') || specialty.contains('의학과')) {
+      return const Color(0xFF5C6BC0); // 보라색 - 정신건강의학과
+    } else if (specialty.contains('영양')) {
+      return const Color(0xFFFF7043); // 주황색 - 영양사
+    } else if (specialty.contains('여성')) {
+      return const Color(0xFFEC407A); // 핑크 - 여성건강
+    } else if (specialty.contains('소아') || specialty.contains('청소년')) {
+      return const Color(0xFF26A69A); // 청록색 - 소아청소년과
+    } else if (specialty.contains('노인')) {
+      return const Color(0xFF8D6E63); // 브라운 - 노인의학
+    }
+    return const Color(0xFF1976D2); // 기본 파란색
   }
 
   Widget _buildCharacterAvatar(CharacterModel character) {

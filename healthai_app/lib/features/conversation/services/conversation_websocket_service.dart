@@ -132,6 +132,24 @@ class ConversationWebSocketService {
     _channel!.sink.add(audioData);
   }
 
+  /// 건강 컨텍스트 전송 (연결 직후 호출)
+  ///
+  /// [healthContext]: HealthContextService.buildHealthContext()로 생성된 맵
+  void sendHealthContext(Map<String, dynamic> healthContext) {
+    if (!_isConnected || _channel == null) {
+      print('WebSocket 연결되지 않음 - 건강 컨텍스트 전송 불가');
+      return;
+    }
+
+    final command = json.encode({
+      'command': 'health_context',
+      'data': healthContext,
+    });
+
+    print('📋 건강 컨텍스트 전송: ${healthContext.keys}');
+    _channel!.sink.add(command);
+  }
+
   /// 세션 종료 요청
   Future<void> endSession() async {
     if (!_isConnected || _channel == null) {
