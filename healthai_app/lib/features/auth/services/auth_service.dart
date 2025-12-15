@@ -213,6 +213,10 @@ class AuthService {
       // 사용자 정보 저장
       if (data['user'] != null) {
         await _saveUserData(data['user']);
+
+        // 관리자 여부 저장 (백엔드 응답에서 확인)
+        final isAdmin = data['user']['is_admin'] ?? false;
+        await _secureStorage.write(key: _isAdminKey, value: isAdmin.toString());
       }
 
       return tokens;
@@ -374,6 +378,11 @@ class AuthService {
       );
 
       await _saveUserData(data);
+
+      // 관리자 여부 저장 (백엔드 응답에서 확인)
+      final isAdmin = data['is_admin'] ?? false;
+      await _secureStorage.write(key: _isAdminKey, value: isAdmin.toString());
+
       return user;
     } catch (e) {
       debugPrint('Get current user error: $e');
@@ -412,17 +421,15 @@ class AuthService {
       // 사용자 정보 저장
       if (data['user'] != null) {
         await _saveUserData(data['user']);
-      }
 
-      // 관리자 여부 확인 (admin 계정인 경우)
-      final testUser = testUsers.firstWhere(
-        (user) => user.username == username,
-        orElse: () => testUsers.first,
-      );
-      await _secureStorage.write(
-        key: _isAdminKey,
-        value: testUser.isAdmin.toString(),
-      );
+        // 관리자 여부 저장 (백엔드 응답에서 확인)
+        final isAdmin = data['user']['is_admin'] ?? false;
+        await _secureStorage.write(
+          key: _isAdminKey,
+          value: isAdmin.toString(),
+        );
+        debugPrint('Admin status saved: $isAdmin');
+      }
 
       return tokens;
     } on DioException catch (e) {
@@ -435,6 +442,7 @@ class AuthService {
   /// 관리자 여부 확인
   Future<bool> isAdmin() async {
     final isAdmin = await _secureStorage.read(key: _isAdminKey);
+    debugPrint('isAdmin check: stored value = "$isAdmin", result = ${isAdmin == 'true'}');
     return isAdmin == 'true';
   }
 

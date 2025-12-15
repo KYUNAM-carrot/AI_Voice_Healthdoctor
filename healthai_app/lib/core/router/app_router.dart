@@ -15,6 +15,8 @@ import '../../features/conversation/screens/conversation_history_detail_screen.d
 import '../../features/character/screens/character_selection_screen.dart';
 import '../../features/routine/screens/morning_routine_screen.dart';
 import '../../features/routine/screens/gratitude_diary_screen.dart';
+import '../../features/routine/screens/routine_calendar_screen.dart';
+import '../../features/routine/screens/routine_stats_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/models/auth_model.dart';
@@ -115,6 +117,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/gratitude',
         name: 'gratitude',
         builder: (context, state) => const GratitudeDiaryScreen(),
+      ),
+      GoRoute(
+        path: '/routine-calendar',
+        name: 'routine-calendar',
+        builder: (context, state) => const RoutineCalendarScreen(),
+      ),
+      GoRoute(
+        path: '/routine-stats',
+        name: 'routine-stats',
+        builder: (context, state) => const RoutineStatsScreen(),
       ),
       GoRoute(
         path: '/conversation-history',

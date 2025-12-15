@@ -177,53 +177,109 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   Widget _buildSliverAppBar(BuildContext context, String userName) {
     final hour = DateTime.now().hour;
-    String greeting = hour < 12 ? '좋은 아침이에요' : hour < 18 ? '좋은 오후에요' : '좋은 저녁이에요';
+    String greeting = hour < 12 ? '좋은 아침이에요 ☀️' : hour < 18 ? '좋은 오후에요 🌤️' : '좋은 저녁이에요 🌙';
 
     return SliverAppBar(
-      expandedHeight: 140,
+      expandedHeight: 145,
       floating: false,
       pinned: true,
-      backgroundColor: AppTheme.background,
+      backgroundColor: Colors.white,
       elevation: 0,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFFF8F9FE), Color(0xFFEEF0F8)],
-            ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppTheme.spaceLg, AppTheme.space2xl, AppTheme.spaceLg, 0,
+      surfaceTintColor: Colors.transparent,
+      flexibleSpace: LayoutBuilder(
+        builder: (context, constraints) {
+          // 스크롤에 따른 투명도 계산
+          final expandRatio = ((constraints.maxHeight - kToolbarHeight) /
+                  (145 - kToolbarHeight))
+              .clamp(0.0, 1.0);
+
+          return FlexibleSpaceBar(
+            titlePadding: const EdgeInsets.only(left: 20, bottom: 14),
+            title: AnimatedOpacity(
+              opacity: expandRatio < 0.5 ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: const Text(
+                'AI 건강주치의',
+                style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 17,
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    greeting,
-                    style: AppTheme.bodySmall.copyWith(color: AppTheme.textSecondary),
+            ),
+            background: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.grey.shade200,
+                    width: 1,
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Text('안녕하세요 ', style: AppTheme.h2),
-                      ShaderMask(
-                        shaderCallback: (bounds) => AppTheme.primaryGradient.createShader(bounds),
-                        child: Text(
-                          '$userName님',
-                          style: AppTheme.h2.copyWith(color: Colors.white),
+                ),
+              ),
+              child: SafeArea(
+                child: AnimatedOpacity(
+                  opacity: expandRatio,
+                  duration: const Duration(milliseconds: 200),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 앱 타이틀
+                        Row(
+                          children: [
+                            ShaderMask(
+                              shaderCallback: (bounds) =>
+                                  AppTheme.primaryGradient.createShader(bounds),
+                              child: const Text(
+                                'AI 건강주치의',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 12),
+                        // 인사말
+                        Text(
+                          greeting,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Text(
+                              '안녕하세요 ',
+                              style: AppTheme.h2.copyWith(fontSize: 18),
+                            ),
+                            ShaderMask(
+                              shaderCallback: (bounds) =>
+                                  AppTheme.primaryGradient.createShader(bounds),
+                              child: Text(
+                                '$userName님 😊',
+                                style: AppTheme.h2.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
       actions: [
         IconButton(
@@ -269,11 +325,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       child: GestureDetector(
         onTap: () => context.push('/characters'),
         child: Container(
-          padding: const EdgeInsets.all(AppTheme.spaceXl),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: AppTheme.primaryGradient,
-            borderRadius: BorderRadius.circular(AppTheme.radiusXl),
-            boxShadow: AppTheme.shadowXl,
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+            boxShadow: AppTheme.shadowLg,
           ),
           child: Row(
             children: [
@@ -283,7 +339,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4,
+                        horizontal: 8, vertical: 3,
                       ),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
@@ -293,63 +349,63 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            width: 6, height: 6,
+                            width: 5, height: 5,
                             decoration: const BoxDecoration(
                               color: Color(0xFF4ADE80),
                               shape: BoxShape.circle,
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 5),
                           const Text(
                             'AI 건강주치의 대기중',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 11,
+                              fontSize: 10,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: AppTheme.spaceMd),
+                    const SizedBox(height: AppTheme.spaceSm),
                     const Text(
                       '지금 바로\n건강 상담하기',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 22,
+                        fontSize: 18,
                         fontWeight: FontWeight.w700,
                         height: 1.3,
                       ),
                     ),
-                    const SizedBox(height: AppTheme.spaceSm),
+                    const SizedBox(height: 6),
                     Text(
                       '각 분야별 전문 AI 건강주치의가 24시간 대기중',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.85),
-                        fontSize: 13,
+                        fontSize: 11,
                       ),
                     ),
                   ],
                 ),
               ),
               Container(
-                width: 72,
-                height: 72,
+                width: 58,
+                height: 58,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.15),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
                     ),
                   ],
                 ),
                 child: const Icon(
                   Icons.mic,
                   color: AppTheme.primary,
-                  size: 32,
+                  size: 26,
                 ),
               ),
             ],
@@ -361,7 +417,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   /// 빠른 액션 그리드
   Widget _buildQuickActions(BuildContext context) {
-    final actions = [
+    final row1Actions = [
       _QuickAction(
         icon: Icons.wb_sunny_outlined,
         label: '아침 건강루틴',
@@ -375,6 +431,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         onTap: () => context.push('/gratitude'),
       ),
       _QuickAction(
+        icon: Icons.calendar_month_outlined,
+        label: '루틴 기록',
+        color: const Color(0xFF74B9FF),
+        onTap: () => context.push('/routine-calendar'),
+      ),
+      _QuickAction(
+        icon: Icons.bar_chart_outlined,
+        label: '루틴 통계',
+        color: const Color(0xFFA29BFE),
+        onTap: () => context.push('/routine-stats'),
+      ),
+    ];
+
+    final row2Actions = [
+      _QuickAction(
         icon: Icons.family_restroom_outlined,
         label: '가족관리',
         color: const Color(0xFF6C5CE7),
@@ -386,11 +457,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         color: const Color(0xFFFF7675),
         onTap: () => context.push('/health/wearable'),
       ),
+      _QuickAction(
+        icon: Icons.history_outlined,
+        label: '상담 기록',
+        color: const Color(0xFF00CEC9),
+        onTap: () => context.push('/conversation-history'),
+      ),
+      _QuickAction(
+        icon: Icons.settings_outlined,
+        label: '설정',
+        color: const Color(0xFF636E72),
+        onTap: () => context.push('/settings'),
+      ),
     ];
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: actions.map((action) => _buildQuickActionItem(action)).toList(),
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: row1Actions.map((action) => _buildQuickActionItem(action)).toList(),
+        ),
+        const SizedBox(height: AppTheme.spaceMd),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: row2Actions.map((action) => _buildQuickActionItem(action)).toList(),
+        ),
+      ],
     );
   }
 

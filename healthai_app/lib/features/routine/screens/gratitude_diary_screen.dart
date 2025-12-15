@@ -581,19 +581,31 @@ class _GratitudeDiaryScreenState extends ConsumerState<GratitudeDiaryScreen> {
     );
   }
 
-  void _saveGratitude() {
-    // 모든 컨트롤러의 값을 Provider에 저장
+  Future<void> _saveGratitude() async {
+    // 모든 컨트롤러의 값을 수집
+    final gratitudeItems = <String>[];
     for (int i = 0; i < _controllers.length; i++) {
-      ref.read(gratitudeItemsProvider.notifier).updateItem(i, _controllers[i].text);
+      final text = _controllers[i].text.trim();
+      if (text.isNotEmpty) {
+        gratitudeItems.add(text);
+      }
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('감사일기가 저장되었습니다'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    // Provider에 저장 (API + 로컬 동시 저장)
+    await ref.read(todayRoutineProvider.notifier).setGratitudeItems(gratitudeItems);
 
-    Navigator.of(context).pop();
+    // 로컬 상태도 업데이트
+    ref.read(gratitudeItemsProvider.notifier).loadItems(gratitudeItems);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('감사일기가 저장되었습니다'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      Navigator.of(context).pop();
+    }
   }
 }

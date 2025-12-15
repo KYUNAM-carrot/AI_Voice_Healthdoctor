@@ -41,12 +41,20 @@ final isAdminProvider = FutureProvider<bool>((ref) async {
   final authState = ref.watch(authStateProvider);
 
   // 인증되지 않은 상태면 관리자 아님
-  if (authState is! AuthStateAuthenticated) {
+  final isAuthenticated = authState.maybeWhen(
+    authenticated: (_, __) => true,
+    orElse: () => false,
+  );
+
+  if (!isAuthenticated) {
+    print('isAdminProvider: Not authenticated, returning false');
     return false;
   }
 
   final authService = ref.watch(authServiceProvider);
-  return await authService.isAdmin();
+  final result = await authService.isAdmin();
+  print('isAdminProvider: Authenticated, isAdmin = $result');
+  return result;
 });
 
 /// 인증 상태 관리 Notifier

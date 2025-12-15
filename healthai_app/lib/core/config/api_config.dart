@@ -6,17 +6,14 @@ import 'dart:io';
 class ApiConfig {
   /// 프로덕션 모드 여부
   /// 프로덕션 배포 시 true로 변경
-  static const bool isProduction = false;
+  static const bool isProduction = true;
 
-  /// 프로덕션 도메인 (HTTPS)
-  static const String productionDomain = 'api.healthai.example.com';
+  /// Fly.io 프로덕션 도메인
+  static const String productionCoreApiDomain = 'healthai-core-api.fly.dev';
+  static const String productionConversationDomain = 'healthai-conversation.fly.dev';
 
   /// 호스트 주소 (포트 제외)
-  static String get _host {
-    if (isProduction) {
-      return productionDomain;
-    }
-
+  static String get _devHost {
     final isEmulator = Platform.environment.containsKey('ANDROID_EMULATOR') ||
         Platform.isAndroid && _isAndroidEmulator();
 
@@ -27,28 +24,22 @@ class ApiConfig {
     }
   }
 
-  /// 프로토콜 (프로덕션: HTTPS, 개발: HTTP)
-  static String get _protocol => isProduction ? 'https' : 'http';
-
-  /// WebSocket 프로토콜 (프로덕션: WSS, 개발: WS)
-  static String get _wsProtocol => isProduction ? 'wss' : 'ws';
-
   /// Core API 베이스 URL (인증, 사용자, 루틴 등)
-  /// 개발: http://host:8002, 프로덕션: https://domain
+  /// 개발: http://host:8002, 프로덕션: https://healthai-core-api.fly.dev
   static String get baseUrl => isProduction
-      ? '$_protocol://$_host'
-      : '$_protocol://$_host:8002';
+      ? 'https://$productionCoreApiDomain'
+      : 'http://$_devHost:8002';
 
   /// Conversation Service 베이스 URL (음성 상담)
-  /// 개발: http://host:8004, 프로덕션: https://domain/conversation
+  /// 개발: http://host:8004, 프로덕션: https://healthai-conversation.fly.dev
   static String get conversationBaseUrl => isProduction
-      ? '$_protocol://$_host/conversation'
-      : '$_protocol://$_host:8004';
+      ? 'https://$productionConversationDomain'
+      : 'http://$_devHost:8004';
 
   /// WebSocket URL (Conversation Service)
   static String get websocketBaseUrl => isProduction
-      ? '$_wsProtocol://$_host/conversation'
-      : '$_wsProtocol://$_host:8004';
+      ? 'wss://$productionConversationDomain'
+      : 'ws://$_devHost:8004';
 
   /// Android 에뮬레이터 여부 확인 (간단한 휴리스틱)
   static bool _isAndroidEmulator() {

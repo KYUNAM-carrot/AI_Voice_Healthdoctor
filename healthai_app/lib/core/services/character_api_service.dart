@@ -55,8 +55,9 @@ class CharacterApiService {
   }
 
   /// 캐릭터 자기소개 오디오 URL 가져오기
+  /// Conversation Service의 welcome-audio 엔드포인트 사용
   String getIntroductionAudioUrl(String characterId) {
-    return '$baseUrl/api/v1/characters/$characterId/introduction';
+    return ApiConfig.welcomeAudioEndpoint(characterId);
   }
 
   /// 캐릭터 자기소개 오디오 다운로드 (바이트 데이터)
