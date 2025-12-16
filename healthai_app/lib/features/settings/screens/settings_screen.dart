@@ -88,6 +88,21 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: AppTheme.spaceLg),
 
+          // 알림 설정
+          _buildSection(
+            context,
+            title: '알림',
+            items: [
+              _SettingsItem(
+                icon: Icons.notifications_outlined,
+                title: '알림 설정',
+                subtitle: '푸시 알림 및 리마인더 관리',
+                onTap: () => context.push('/notification-settings'),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spaceLg),
+
           // 앱 정보
           _buildSection(
             context,

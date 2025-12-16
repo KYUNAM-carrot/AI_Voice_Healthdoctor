@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "32824989954",
+    "project_id": "healthdoctor-8c3df",
+    "storage_bucket": "healthdoctor-8c3df.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:32824989954:android:2f885e053b2ed189c2ca1b",
+        "android_client_info": {
+          "package_name": "com.healthai.healthai_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdlxN8ZVsv1-fBZTmZiFKFh0-EGRls3-8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

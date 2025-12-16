@@ -22,6 +22,7 @@ import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/models/auth_model.dart';
 import '../../features/settings/screens/profile_edit_screen.dart';
 import '../../features/admin/screens/admin_dashboard_screen.dart';
+import '../../features/notification/screens/notification_settings_screen.dart';
 
 // Router configuration with authentication
 final routerProvider = Provider<GoRouter>((ref) {
@@ -87,6 +88,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         name: 'settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/notification-settings',
+        name: 'notification-settings',
+        builder: (context, state) => const NotificationSettingsScreen(),
       ),
       GoRoute(
         path: '/profile',

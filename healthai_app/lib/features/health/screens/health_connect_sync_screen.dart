@@ -20,32 +20,110 @@ class HealthConnectSyncScreen extends ConsumerStatefulWidget {
 class _HealthConnectSyncScreenState
     extends ConsumerState<HealthConnectSyncScreen> {
   final HealthConnectService _healthConnectService = HealthConnectService();
-  bool _isAvailable = false;
   bool _isAuthorized = false;
   bool _isSyncing = false;
   bool _isLoading = true;
+  bool _isRequesting = false;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _checkAvailability();
+    _checkAndRequestPermission();
   }
 
-  Future<void> _checkAvailability() async {
+  /// 권한 확인 및 요청
+  Future<void> _checkAndRequestPermission() async {
     if (!Platform.isAndroid) {
       setState(() => _isLoading = false);
       return;
     }
 
-    final available = await _healthConnectService.isHealthConnectAvailable();
-    final authorized =
-        available ? await _healthConnectService.requestAuthorization() : false;
-
     setState(() {
-      _isAvailable = available;
-      _isAuthorized = authorized;
-      _isLoading = false;
+      _isLoading = true;
+      _errorMessage = null;
     });
+
+    try {
+      // 먼저 권한 상태 확인 (실제 데이터 접근 시도 포함)
+      final authorized = await _healthConnectService.checkPermissionStatus();
+
+      setState(() {
+        _isAuthorized = authorized;
+        _isLoading = false;
+        if (!authorized) {
+          _errorMessage = '헬스 커넥트에서 권한을 허용해주세요.';
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isAuthorized = false;
+        _isLoading = false;
+        _errorMessage = '연결 확인 실패: $e';
+      });
+    }
+  }
+
+  /// 권한 요청 버튼 클릭
+  Future<void> _onRequestPermissionPressed() async {
+    setState(() => _isRequesting = true);
+
+    try {
+      // 먼저 Health Connect 권한 설정 화면을 직접 열어봄
+      final opened = await _healthConnectService.openHealthConnectPermissionSettings();
+
+      if (opened) {
+        // 권한 설정 화면이 열렸으면 사용자가 돌아올 때까지 대기
+        if (mounted) {
+          setState(() => _isRequesting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('헬스 커넥트에서 "음성 건강주치의" 앱의 권한을 허용해주세요.'),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+        return;
+      }
+
+      // 설정 화면을 열지 못했으면 기본 권한 요청 시도
+      final authorized = await _healthConnectService.requestAuthorization();
+
+      if (mounted) {
+        setState(() {
+          _isAuthorized = authorized;
+          _isRequesting = false;
+          _errorMessage = authorized ? null : '헬스 커넥트에서 권한을 허용해주세요.';
+        });
+
+        if (!authorized) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('헬스 커넥트 앱에서 권한을 직접 설정해주세요.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isRequesting = false;
+          _errorMessage = '권한 요청 실패: $e';
+        });
+      }
+    }
+  }
+
+  /// Health Connect 설치/설정 버튼 클릭
+  Future<void> _onInstallPressed() async {
+    // 헬스 커넥트 앱의 권한 설정 화면을 직접 열기
+    await _healthConnectService.openHealthConnectPermissionSettings();
+  }
+
+  /// 새로고침 버튼 클릭
+  Future<void> _onRefreshPressed() async {
+    _checkAndRequestPermission();
   }
 
   @override
@@ -80,7 +158,7 @@ class _HealthConnectSyncScreenState
           const SizedBox(height: AppTheme.spaceLg),
 
           // 프로필 선택 및 동기화
-          if (_isAvailable && _isAuthorized)
+          if (_isAuthorized)
             familyProfilesAsync.when(
               data: (profiles) => _buildProfileList(profiles),
               loading: () => const Center(child: LoadingIndicator()),
@@ -93,69 +171,92 @@ class _HealthConnectSyncScreenState
   }
 
   Widget _buildStatusCard() {
-    if (!_isAvailable) {
+    // 권한 승인됨
+    if (_isAuthorized) {
       return CustomCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              children: [
-                const Icon(Icons.warning, color: AppTheme.warning),
-                const SizedBox(width: AppTheme.spaceSm),
-                const Text('Health Connect 미설치', style: AppTheme.h3),
-              ],
-            ),
-            const SizedBox(height: AppTheme.spaceMd),
-            const Text(
-              'Health Connect를 설치하면 웨어러블 데이터를 자동으로 동기화할 수 있습니다.',
-              style: AppTheme.bodyMedium,
-            ),
-            const SizedBox(height: AppTheme.spaceMd),
-            ElevatedButton(
-              onPressed: () async {
-                await _healthConnectService.openHealthConnectSettings();
-                _checkAvailability();
-              },
-              child: const Text('Play Store에서 설치'),
-            ),
+            const Icon(Icons.check_circle, color: AppTheme.success),
+            const SizedBox(width: AppTheme.spaceSm),
+            const Text('Health Connect 연결됨', style: AppTheme.h3),
           ],
         ),
       );
     }
 
-    if (!_isAuthorized) {
-      return CustomCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.lock, color: AppTheme.warning),
-                const SizedBox(width: AppTheme.spaceSm),
-                const Text('권한 필요', style: AppTheme.h3),
-              ],
-            ),
-            const SizedBox(height: AppTheme.spaceMd),
-            const Text(
-              '건강 데이터를 읽기 위해 권한이 필요합니다.',
-              style: AppTheme.bodyMedium,
-            ),
-            const SizedBox(height: AppTheme.spaceMd),
-            ElevatedButton(
-              onPressed: () => _checkAvailability(),
-              child: const Text('권한 요청'),
-            ),
-          ],
-        ),
-      );
-    }
-
+    // 권한 필요 또는 설치 필요
     return CustomCard(
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle, color: AppTheme.success),
-          const SizedBox(width: AppTheme.spaceSm),
-          const Text('Health Connect 연결됨', style: AppTheme.h3),
+          Row(
+            children: [
+              const Icon(Icons.health_and_safety, color: AppTheme.primary),
+              const SizedBox(width: AppTheme.spaceSm),
+              const Text('Health Connect 연결', style: AppTheme.h3),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spaceMd),
+          const Text(
+            'Health Connect를 통해 웨어러블 기기의 건강 데이터를 동기화할 수 있습니다.',
+            style: AppTheme.bodyMedium,
+          ),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: AppTheme.spaceSm),
+            Text(
+              _errorMessage!,
+              style: AppTheme.bodySmall.copyWith(color: AppTheme.warning),
+            ),
+          ],
+          const SizedBox(height: AppTheme.spaceMd),
+          Row(
+            children: [
+              // 권한 요청 버튼
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _isRequesting ? null : _onRequestPermissionPressed,
+                  child: _isRequesting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('권한 설정 열기'),
+                ),
+              ),
+              const SizedBox(width: AppTheme.spaceSm),
+              // 새로고침 버튼
+              IconButton(
+                onPressed: _onRefreshPressed,
+                icon: const Icon(Icons.refresh),
+                tooltip: '상태 새로고침',
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spaceMd),
+          // 안내 문구
+          Container(
+            padding: const EdgeInsets.all(AppTheme.spaceMd),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '권한 설정 방법:',
+                  style: AppTheme.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: AppTheme.spaceSm),
+                const Text('1. "권한 설정 열기" 버튼을 누르세요', style: AppTheme.bodySmall),
+                const Text('2. 헬스 커넥트 앱이 열립니다', style: AppTheme.bodySmall),
+                const Text('3. "음성 건강주치의" 앱을 찾아 선택하세요', style: AppTheme.bodySmall),
+                const Text('4. 모든 데이터 권한을 허용해주세요', style: AppTheme.bodySmall),
+                const Text('5. 이 화면으로 돌아와서 🔄 버튼을 누르세요', style: AppTheme.bodySmall),
+              ],
+            ),
+          ),
         ],
       ),
     );

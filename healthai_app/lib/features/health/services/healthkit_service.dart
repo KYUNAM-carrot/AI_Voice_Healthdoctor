@@ -43,15 +43,17 @@ class HealthKitService {
         throw Exception('HealthKit permission not granted');
       }
 
-      // 데이터 읽기
-      // TODO: health 13.x API 변경 - 나중에 수정 필요
-      // final healthData = await _health.getHealthDataFromTypes(
-      //   types: _dataTypes,
-      //   startTime: startDate,
-      //   endTime: now,
-      // );
+      // 데이터 읽기 (health 13.x API)
+      final healthData = await _health.getHealthDataFromTypes(
+        startTime: startDate,
+        endTime: now,
+        types: _dataTypes,
+      );
 
-      return [];
+      // 중복 제거
+      final uniqueData = _health.removeDuplicates(healthData);
+
+      return uniqueData;
     } catch (e) {
       print('Error fetching HealthKit data: $e');
       return [];
@@ -85,14 +87,20 @@ class HealthKitService {
         dataType = 'unknown';
     }
 
+    // health 13.x에서 값 추출
+    double value = 0.0;
+    if (dataPoint.value is NumericHealthValue) {
+      value = (dataPoint.value as NumericHealthValue).numericValue.toDouble();
+    }
+
     return {
       'data_type': dataType,
-      'value': 0.0, // TODO: health 13.x API 변경
+      'value': value,
       'unit': dataPoint.unit.name,
       'start_time': dataPoint.dateFrom.toIso8601String(),
       'end_time': dataPoint.dateTo.toIso8601String(),
       'source': 'apple_health',
-      'device_id': 'unknown', // TODO: health 13.x API 변경
+      'device_id': dataPoint.sourceName ?? 'unknown',
     };
   }
 }
