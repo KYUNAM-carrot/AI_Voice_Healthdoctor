@@ -36,7 +36,8 @@ final currentUserProvider = Provider<UserModel?>((ref) {
 });
 
 /// 관리자 여부 Provider
-final isAdminProvider = FutureProvider<bool>((ref) async {
+/// autoDispose를 사용하여 authState 변경 시 자동으로 재계산
+final isAdminProvider = FutureProvider.autoDispose<bool>((ref) async {
   // authState를 watch하여 로그인/로그아웃 시 자동 갱신
   final authState = ref.watch(authStateProvider);
 

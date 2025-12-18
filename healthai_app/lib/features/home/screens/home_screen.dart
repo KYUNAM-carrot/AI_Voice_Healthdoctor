@@ -8,6 +8,7 @@ import '../../../core/widgets/common_widgets.dart';
 import '../../../core/services/conversation_history_service.dart';
 import '../../characters/providers/characters_provider.dart';
 import '../../family/providers/family_provider.dart';
+import '../../family/widgets/family_profile_selector.dart';
 import '../../routine/providers/routine_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 
@@ -20,7 +21,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   List<ConversationHistory> _recentHistories = [];
   bool _isLoadingHistories = true;
   late AnimationController _pulseController;
@@ -36,6 +37,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadRecentHistories();
 
     // 펄스 애니메이션 (음성 상담 버튼용)
@@ -91,11 +93,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pulseController.dispose();
     _autoScrollTimer.cancel();
     _doctorScrollController.removeListener(_onDoctorScroll);
     _doctorScrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // 앱이 다시 활성화될 때 최근 상담 목록 갱신
+    if (state == AppLifecycleState.resumed) {
+      _loadRecentHistories();
+    }
   }
 
   Future<void> _loadRecentHistories() async {
@@ -767,11 +779,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final color = colors[index % colors.length];
 
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         final displayName = '${character.name} ${character.specialty}';
-        context.push(
-          '/voice-conversation/${character.id}?name=${Uri.encodeComponent(displayName)}',
+
+        // 가족 프로필 선택 다이얼로그 표시
+        final selectedProfile = await showFamilyProfileSelector(
+          context: context,
+          characterName: displayName,
         );
+
+        // 프로필이 선택되면 상담 화면으로 이동
+        if (selectedProfile != null && context.mounted) {
+          context.push(
+            '/voice-conversation/${character.id}'
+            '?name=${Uri.encodeComponent(displayName)}'
+            '&profileId=${selectedProfile.id}'
+            '&profileName=${Uri.encodeComponent(selectedProfile.name)}',
+          );
+        }
       },
       child: Container(
         width: 100,
