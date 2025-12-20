@@ -486,45 +486,64 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Column(
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: row1Actions.map((action) => _buildQuickActionItem(action)).toList(),
+          children: [
+            _buildQuickActionItem(row1Actions[0]),
+            const SizedBox(width: AppTheme.spaceXs),
+            _buildQuickActionItem(row1Actions[1]),
+            const SizedBox(width: AppTheme.spaceXs),
+            _buildQuickActionItem(row1Actions[2]),
+            const SizedBox(width: AppTheme.spaceXs),
+            _buildQuickActionItem(row1Actions[3]),
+          ],
         ),
         const SizedBox(height: AppTheme.spaceMd),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: row2Actions.map((action) => _buildQuickActionItem(action)).toList(),
+          children: [
+            _buildQuickActionItem(row2Actions[0]),
+            const SizedBox(width: AppTheme.spaceXs),
+            _buildQuickActionItem(row2Actions[1]),
+            const SizedBox(width: AppTheme.spaceXs),
+            _buildQuickActionItem(row2Actions[2]),
+            const SizedBox(width: AppTheme.spaceXs),
+            _buildQuickActionItem(row2Actions[3]),
+          ],
         ),
       ],
     );
   }
 
   Widget _buildQuickActionItem(_QuickAction action) {
-    return GestureDetector(
-      onTap: action.onTap,
-      child: Column(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: action.color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-              border: Border.all(
-                color: action.color.withOpacity(0.2),
-                width: 1,
+    return Expanded(
+      child: GestureDetector(
+        onTap: action.onTap,
+        child: Column(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: action.color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                border: Border.all(
+                  color: action.color.withOpacity(0.2),
+                  width: 1,
+                ),
               ),
+              child: Icon(action.icon, color: action.color, size: 24),
             ),
-            child: Icon(action.icon, color: action.color, size: 24),
-          ),
-          const SizedBox(height: AppTheme.spaceSm),
-          Text(
-            action.label,
-            style: AppTheme.caption.copyWith(
-              fontWeight: FontWeight.w500,
-              color: AppTheme.textPrimary,
+            const SizedBox(height: AppTheme.spaceSm),
+            Text(
+              action.label,
+              style: AppTheme.caption.copyWith(
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textPrimary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
