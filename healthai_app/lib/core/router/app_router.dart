@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/subscription/screens/subscription_demo_screen.dart';
 import '../../features/health/screens/healthkit_sync_screen.dart';
@@ -23,26 +24,42 @@ import '../../features/auth/models/auth_model.dart';
 import '../../features/settings/screens/profile_edit_screen.dart';
 import '../../features/admin/screens/admin_dashboard_screen.dart';
 import '../../features/notification/screens/notification_settings_screen.dart';
+import '../../features/onboarding/screens/onboarding_screen.dart';
 
 // Router configuration with authentication
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
 
   return GoRouter(
-    initialLocation: '/login',
-    redirect: (context, state) {
+    initialLocation: '/onboarding',
+    redirect: (context, state) async {
+      final isOnboardingRoute = state.matchedLocation == '/onboarding';
       final isLoginRoute = state.matchedLocation == '/login';
       final isAuthenticated = authState is AuthStateAuthenticated;
       final isLoading = authState is AuthStateLoading;
       final isInitial = authState is AuthStateInitial;
+
+      // 온보딩 완료 여부 확인
+      final prefs = await SharedPreferences.getInstance();
+      final onboardingCompleted = prefs.getBool('onboarding_completed') ?? false;
 
       // 초기 상태나 로딩 중에는 리다이렉트하지 않음
       if (isInitial || isLoading) {
         return null;
       }
 
+      // 온보딩 미완료 시 온보딩으로 리다이렉트
+      if (!onboardingCompleted && !isOnboardingRoute) {
+        return '/onboarding';
+      }
+
+      // 온보딩 완료 후 온보딩 페이지 접근 시 로그인으로 리다이렉트
+      if (onboardingCompleted && isOnboardingRoute) {
+        return '/login';
+      }
+
       // 인증되지 않은 상태에서 보호된 페이지 접근 시 로그인으로 리다이렉트
-      if (!isAuthenticated && !isLoginRoute) {
+      if (!isAuthenticated && !isLoginRoute && !isOnboardingRoute) {
         return '/login';
       }
 
@@ -54,6 +71,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/onboarding',
+        name: 'onboarding',
+        builder: (context, state) => const OnboardingScreen(),
+      ),
       GoRoute(
         path: '/login',
         name: 'login',
