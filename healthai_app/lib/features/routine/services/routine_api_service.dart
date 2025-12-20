@@ -22,7 +22,7 @@ class RoutineApiService {
         if (_authToken != null) 'Authorization': 'Bearer $_authToken',
       };
 
-  /// 8개 루틴 항목 목록 조회
+  /// 9개 루틴 항목 목록 조회
   Future<List<RoutineItemDefinition>> getRoutineItems() async {
     try {
       final response = await _client.get(
@@ -182,7 +182,7 @@ class RoutineApiService {
   }
 }
 
-/// 루틴 항목 정의 (Backend에서 받아오는 8개 항목)
+/// 루틴 항목 정의 (Backend에서 받아오는 9개 항목)
 class RoutineItemDefinition {
   final String id;
   final String emoji;
@@ -217,6 +217,7 @@ class RoutineCheckRequest {
   final bool vitamins;
   final bool morningWalk;
   final bool planning;
+  final bool gratitudeDiaryCheck;
   final int? moodScore;
   final int? energyScore;
   final String? goalToday;
@@ -233,6 +234,7 @@ class RoutineCheckRequest {
     this.vitamins = false,
     this.morningWalk = false,
     this.planning = false,
+    this.gratitudeDiaryCheck = false,
     this.moodScore,
     this.energyScore,
     this.goalToday,
@@ -252,6 +254,7 @@ class RoutineCheckRequest {
       'vitamins': vitamins,
       'morning_walk': morningWalk,
       'planning': planning,
+      'gratitude_diary_check': gratitudeDiaryCheck,
       if (moodScore != null) 'mood_score': moodScore,
       if (energyScore != null) 'energy_score': energyScore,
       if (goalToday != null) 'goal_today': goalToday,
@@ -274,6 +277,7 @@ class RoutineCheckRequest {
       vitamins: itemMap['vitamins'] ?? false,
       morningWalk: itemMap['morning_walk'] ?? false,
       planning: itemMap['planning'] ?? false,
+      gratitudeDiaryCheck: itemMap['gratitude_diary_check'] ?? false,
       moodScore: routine.mood?.level,
       energyScore: routine.energy?.level,
       goalToday: routine.todayGoal,
@@ -296,6 +300,7 @@ class RoutineCheckResponse {
   final bool vitamins;
   final bool morningWalk;
   final bool planning;
+  final bool gratitudeDiaryCheck;
   final int? moodScore;
   final int? energyScore;
   final String? goalToday;
@@ -316,6 +321,7 @@ class RoutineCheckResponse {
     required this.vitamins,
     required this.morningWalk,
     required this.planning,
+    required this.gratitudeDiaryCheck,
     this.moodScore,
     this.energyScore,
     this.goalToday,
@@ -338,6 +344,7 @@ class RoutineCheckResponse {
       vitamins: json['vitamins'] as bool,
       morningWalk: json['morning_walk'] as bool,
       planning: json['planning'] as bool,
+      gratitudeDiaryCheck: json['gratitude_diary_check'] as bool? ?? false,
       moodScore: json['mood_score'] as int?,
       energyScore: json['energy_score'] as int?,
       goalToday: json['goal_today'] as String?,
@@ -361,7 +368,8 @@ class RoutineCheckResponse {
         RoutineItem(id: 'morning_tea', title: '아침 차 한 잔', emoji: '☕', isCompleted: morningTea, order: 4),
         RoutineItem(id: 'vitamins', title: '영양제 챙겨 먹기', emoji: '💊', isCompleted: vitamins, order: 5),
         RoutineItem(id: 'morning_walk', title: '러닝 30분', emoji: '🏃', isCompleted: morningWalk, order: 6),
-        RoutineItem(id: 'planning', title: '아침 일기', emoji: '✏️', isCompleted: planning, order: 7),
+        RoutineItem(id: 'planning', title: '하루 주요일정 및 목표설정하기', emoji: '✏️', isCompleted: planning, order: 7),
+        RoutineItem(id: 'gratitude_diary_check', title: '어제 감사일기 쓰기 체크', emoji: '🙏', isCompleted: gratitudeDiaryCheck, order: 8),
       ],
       mood: moodScore != null ? ConditionLevel(type: ConditionType.mood, level: moodScore!) : null,
       energy: energyScore != null ? ConditionLevel(type: ConditionType.energy, level: energyScore!) : null,
