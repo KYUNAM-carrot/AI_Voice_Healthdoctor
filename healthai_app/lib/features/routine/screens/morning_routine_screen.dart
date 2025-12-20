@@ -49,6 +49,7 @@ class _MorningRoutineScreenState extends ConsumerState<MorningRoutineScreen> {
         title: const Text('오늘의 아침 건강루틴'),
         centerTitle: false,
       ),
+      resizeToAvoidBottomInset: true,
       body: routineAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
@@ -120,23 +121,21 @@ class _MorningRoutineScreenState extends ConsumerState<MorningRoutineScreen> {
 
                 // 감사일기 바로가기 버튼
                 _buildGratitudeDiaryButton(),
+                const SizedBox(height: AppTheme.spaceXl),
+
+                // 저장하기 버튼
+                ElevatedButton(
+                  onPressed: _saveRoutine,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                  child: const Text('저장하기'),
+                ),
                 const SizedBox(height: AppTheme.space2xl),
               ],
             ),
           );
         },
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppTheme.spaceLg),
-          child: ElevatedButton(
-            onPressed: _saveRoutine,
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
-            ),
-            child: const Text('저장하기'),
-          ),
-        ),
       ),
     );
   }
@@ -402,9 +401,12 @@ class _MorningRoutineScreenState extends ConsumerState<MorningRoutineScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('저장되었습니다'),
-        duration: Duration(seconds: 2),
+        duration: Duration(seconds: 1),
       ),
     );
+
+    // 홈화면으로 이동
+    context.go('/home');
   }
 }
 
