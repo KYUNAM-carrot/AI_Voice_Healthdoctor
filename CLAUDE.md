@@ -4,6 +4,14 @@
 
 AI 건강 주치의 앱 - OpenAI Realtime API를 활용한 실시간 음성 상담 서비스
 
+### 참조 문서
+이 프로젝트의 상세 기획 및 설계 문서:
+- **PRD v1.3** - Product Requirements Document (제품 요구사항 정의서)
+- **TRD v1.3** - Technical Requirements Document (기술 요구사항 정의서)
+- **AI캐릭터 시스템프롬프트 가이드 v1.2** - AI 캐릭터별 페르소나 및 대화 가이드
+- **개발 체크리스트 v1.3** - 기능별 개발 완료 체크리스트
+- **UI/UX 디자인 가이드 v1.2** - 화면별 디자인 명세 및 사용자 경험 가이드
+
 ### 기술 스택
 - **Frontend**: Flutter 3.x (Dart)
 - **Backend**: FastAPI (Python 3.11+)
