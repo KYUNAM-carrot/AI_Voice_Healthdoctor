@@ -101,8 +101,14 @@ class DefaultRoutineItems {
         const RoutineItem(
           id: 'planning',
           emoji: '✏️',
-          title: '아침 일기',
+          title: '하루 주요일정 및 목표설정하기',
           order: 7,
+        ),
+        const RoutineItem(
+          id: 'gratitude_diary_check',
+          emoji: '🙏',
+          title: '어제 감사일기 쓰기 체크',
+          order: 8,
         ),
       ];
 
