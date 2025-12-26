@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/family_profile_model.dart';
 import '../services/family_api_service.dart';
+import '../../auth/providers/auth_provider.dart';
 
 /// 가족 API 서비스 프로바이더
 final familyApiServiceProvider = Provider<FamilyApiService>((ref) {
@@ -19,10 +20,25 @@ final selectedFamilyProfileProvider =
 
 /// 가족 프로필 Notifier
 class FamilyProfilesNotifier extends AsyncNotifier<List<FamilyProfileModel>> {
-  late final FamilyApiService _apiService;
+  late FamilyApiService _apiService;
 
   @override
   Future<List<FamilyProfileModel>> build() async {
+    // authState를 watch하여 로그인/로그아웃 시 자동으로 프로필 목록 갱신
+    final authState = ref.watch(authStateProvider);
+
+    // 인증되지 않은 경우 빈 목록 반환 및 선택된 프로필 초기화
+    final isAuthenticated = authState.maybeWhen(
+      authenticated: (_, __) => true,
+      orElse: () => false,
+    );
+
+    if (!isAuthenticated) {
+      // 로그아웃 시 선택된 프로필 초기화
+      ref.read(selectedFamilyProfileProvider.notifier).state = null;
+      return [];
+    }
+
     _apiService = ref.read(familyApiServiceProvider);
     return _fetchProfiles();
   }

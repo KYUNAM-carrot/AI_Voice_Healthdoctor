@@ -3,18 +3,24 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+/// 건강 상태 시나리오 (테스트 데이터 생성용)
+enum HealthScenario {
+  good,      // 좋은 상태: 높은 걸음수, 안정적인 심박수
+  medium,    // 중간 상태: 보통 걸음수, 정상 심박수
+  bad,       // 나쁜 상태: 낮은 걸음수, 불규칙한 심박수
+  emergency, // 응급 상태: 매우 낮은 활동량, 위험한 심박수
+}
+
 class HealthConnectService {
   final Health _health = Health();
   bool _isConfigured = false;
 
-  // 읽을 데이터 타입 (Android)
+  // 읽을 데이터 타입 (Android) - 일반적으로 지원되는 타입만 포함
   static final List<HealthDataType> _dataTypes = [
     HealthDataType.STEPS,
     HealthDataType.HEART_RATE,
-    HealthDataType.BLOOD_OXYGEN,
     HealthDataType.SLEEP_ASLEEP,
     HealthDataType.ACTIVE_ENERGY_BURNED,
-    HealthDataType.DISTANCE_WALKING_RUNNING,
   ];
 
   // 권한 목록 (모두 READ)
@@ -181,13 +187,14 @@ class HealthConnectService {
     try {
       await _configure();
 
-      // 권한 확인
-      final hasPermission = await _health.hasPermissions(
-        _dataTypes,
-        permissions: _permissions,
-      );
-      if (hasPermission != true) {
-        throw Exception('Health Connect permission not granted');
+      // 권한 요청 (hasPermissions 체크 생략 - 일부 기기에서 오류 발생)
+      try {
+        await _health.requestAuthorization(
+          _dataTypes,
+          permissions: _permissions,
+        );
+      } catch (e) {
+        debugPrint('Authorization request error (continuing): $e');
       }
 
       debugPrint('Fetching Health Connect data from $startDate to $now');
@@ -212,6 +219,193 @@ class HealthConnectService {
       return [];
     }
   }
+
+  // ========== 테스트 데이터 삽입 (개발용) ==========
+
+  /// 테스트용 샘플 데이터 삽입
+  /// [daysBack]: 며칠 전부터 데이터를 생성할지 (기본 7일)
+  /// [scenario]: 건강 상태 시나리오 (기본: medium)
+  Future<bool> insertTestData({
+    int daysBack = 7,
+    HealthScenario scenario = HealthScenario.medium,
+  }) async {
+    try {
+      await _configure();
+      debugPrint('=== Starting test data insertion (${scenario.name}) ===');
+
+      // 쓰기 권한 타입 정의 (걸음수, 심박수, 수면)
+      final writeTypes = [
+        HealthDataType.STEPS,
+        HealthDataType.HEART_RATE,
+        HealthDataType.SLEEP_ASLEEP,
+      ];
+
+      final writePermissions = writeTypes
+          .map((type) => HealthDataAccess.READ_WRITE)
+          .toList();
+
+      // 권한 요청 (hasPermissions 체크 생략 - 일부 기기에서 오류 발생)
+      debugPrint('Requesting write permissions for: $writeTypes');
+      try {
+        final authorized = await _health.requestAuthorization(
+          writeTypes,
+          permissions: writePermissions,
+        );
+        debugPrint('Authorization result: $authorized');
+      } catch (e) {
+        debugPrint('Authorization request error (continuing anyway): $e');
+      }
+
+      final now = DateTime.now();
+      int successCount = 0;
+      int failCount = 0;
+
+      // 타임스탬프를 고유하게 만들기 위한 오프셋 (분 단위)
+      final uniqueOffset = now.minute;
+
+      for (int i = 0; i < daysBack; i++) {
+        final date = now.subtract(Duration(days: i));
+        // 매번 다른 시간대에 기록되도록 현재 시간의 분을 오프셋으로 추가
+        final startOfDay = DateTime(date.year, date.month, date.day, 8, uniqueOffset);
+        final endOfDay = DateTime(date.year, date.month, date.day, 20, uniqueOffset);
+
+        // 시나리오별 데이터 값 설정
+        final (steps, heartRates, sleepMinutes) = _getScenarioData(scenario, i, daysBack);
+
+        // 1. 걸음 수 데이터
+        try {
+          debugPrint('Writing steps: $steps for day -$i (${scenario.name})');
+
+          final stepsSuccess = await _health.writeHealthData(
+            value: steps.toDouble(),
+            type: HealthDataType.STEPS,
+            startTime: startOfDay,
+            endTime: endOfDay,
+          );
+
+          if (stepsSuccess) {
+            successCount++;
+            debugPrint('✓ Steps OK');
+          } else {
+            failCount++;
+            debugPrint('✗ Steps FAIL');
+          }
+        } catch (e) {
+          failCount++;
+          debugPrint('✗ Steps ERROR: $e');
+        }
+
+        // 2. 심박수 데이터 (하루에 여러 번 측정)
+        for (int j = 0; j < heartRates.length; j++) {
+          try {
+            // 고유한 시간: 기본 시간 + uniqueOffset 분
+            final heartRateTime = DateTime(date.year, date.month, date.day,
+                10 + j * 3, uniqueOffset);
+            final hrSuccess = await _health.writeHealthData(
+              value: heartRates[j].toDouble(),
+              type: HealthDataType.HEART_RATE,
+              startTime: heartRateTime,
+              endTime: heartRateTime.add(const Duration(seconds: 30)),
+            );
+
+            if (hrSuccess) {
+              successCount++;
+              debugPrint('✓ HR ${heartRates[j]} OK');
+            } else {
+              failCount++;
+              debugPrint('✗ HR FAIL');
+            }
+          } catch (e) {
+            failCount++;
+            debugPrint('✗ HR ERROR: $e');
+          }
+        }
+
+        // 3. 수면 데이터 (전날 밤 ~ 당일 아침)
+        try {
+          // 수면 시작: 전날 밤 23시 + uniqueOffset분
+          final sleepStart = DateTime(date.year, date.month, date.day, 0, uniqueOffset)
+              .subtract(const Duration(hours: 1)); // 전날 23시 + offset
+          final sleepEnd = sleepStart.add(Duration(minutes: sleepMinutes));
+
+          debugPrint('Writing sleep: $sleepMinutes min for day -$i (${scenario.name})');
+
+          final sleepSuccess = await _health.writeHealthData(
+            value: sleepMinutes.toDouble(),
+            type: HealthDataType.SLEEP_ASLEEP,
+            startTime: sleepStart,
+            endTime: sleepEnd,
+          );
+
+          if (sleepSuccess) {
+            successCount++;
+            debugPrint('✓ Sleep $sleepMinutes min OK');
+          } else {
+            failCount++;
+            debugPrint('✗ Sleep FAIL');
+          }
+        } catch (e) {
+          failCount++;
+          debugPrint('✗ Sleep ERROR: $e');
+        }
+      }
+
+      debugPrint('=== Complete: $successCount success, $failCount fail ===');
+
+      return successCount > 0;
+    } catch (e, stackTrace) {
+      debugPrint('Fatal error: $e');
+      debugPrint('$stackTrace');
+      return false;
+    }
+  }
+
+  /// 시나리오별 걸음수, 심박수, 수면시간(분) 데이터 반환
+  (int steps, List<int> heartRates, int sleepMinutes) _getScenarioData(
+    HealthScenario scenario,
+    int dayIndex,
+    int totalDays,
+  ) {
+    switch (scenario) {
+      case HealthScenario.good:
+        // 좋은 상태: 8000-12000 걸음, 안정적인 심박수 60-75, 7-8시간 수면
+        return (
+          8000 + (dayIndex * 300) + (DateTime.now().millisecond % 4000),
+          [62, 65, 68, 64], // 안정적인 심박수
+          420 + (dayIndex * 10), // 7시간(420분) + 변동
+        );
+
+      case HealthScenario.medium:
+        // 중간 상태: 4000-6000 걸음, 정상 심박수 70-85, 6-7시간 수면
+        return (
+          4000 + (dayIndex * 200) + (DateTime.now().millisecond % 2000),
+          [72, 78, 82, 75], // 정상 범위 심박수
+          360 + (dayIndex * 15), // 6시간(360분) + 변동
+        );
+
+      case HealthScenario.bad:
+        // 나쁜 상태: 1000-3000 걸음, 불규칙한 심박수 55-100, 4-5시간 수면
+        return (
+          1000 + (dayIndex * 150) + (DateTime.now().millisecond % 2000),
+          [55, 95, 58, 92], // 불규칙한 심박수
+          240 + (dayIndex * 20), // 4시간(240분) + 변동
+        );
+
+      case HealthScenario.emergency:
+        // 응급 상태: 매우 낮은 활동 (100-500걸음), 위험한 심박수, 2-3시간 수면
+        // 일부 날은 빈맥(130+), 일부는 서맥(40-50)
+        final isOddDay = dayIndex % 2 == 1;
+        return (
+          100 + (dayIndex * 50) + (DateTime.now().millisecond % 400),
+          isOddDay
+              ? [135, 142, 138, 145] // 빈맥 (Tachycardia)
+              : [42, 45, 40, 38],    // 서맥 (Bradycardia)
+          120 + (dayIndex * 15), // 2시간(120분) + 변동
+        );
+    }
+  }
+
+  // ========== END 테스트 데이터 ==========
 
   /// HealthDataPoint를 Backend API 형식으로 변환
   Map<String, dynamic> convertToApiFormat(HealthDataPoint dataPoint) {
