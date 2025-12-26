@@ -117,108 +117,121 @@ class _RoutineCalendarScreenState extends ConsumerState<RoutineCalendarScreen> {
         ),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          // 캘린더
-          Container(
-            margin: const EdgeInsets.all(AppTheme.spaceMd),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: TableCalendar(
-              locale: 'ko_KR',
-              firstDay: DateTime.utc(2024, 1, 1),
-              lastDay: DateTime.utc(2030, 12, 31),
-              focusedDay: _focusedDay,
-              calendarFormat: _calendarFormat,
-              selectedDayPredicate: (day) {
-                return isSameDay(_selectedDay, day);
-              },
-              onDaySelected: (selectedDay, focusedDay) {
-                setState(() {
-                  _selectedDay = selectedDay;
-                  _focusedDay = focusedDay;
-                });
-                ref.read(selectedDateProvider.notifier).state = selectedDay;
-              },
-              onFormatChanged: (format) {
-                setState(() {
-                  _calendarFormat = format;
-                });
-              },
-              onPageChanged: (focusedDay) {
-                _focusedDay = focusedDay;
-                ref.read(monthlyRoutineDataProvider.notifier).loadMonth(focusedDay.year, focusedDay.month);
-              },
-              calendarBuilders: CalendarBuilders(
-                markerBuilder: (context, date, events) {
-                  final normalizedDate = DateTime(date.year, date.month, date.day);
-                  final routine = monthlyData[normalizedDate];
-                  if (routine != null) {
-                    final completedCount = routine.items.where((item) => item.isCompleted).length;
-                    final completionRate = completedCount / routine.items.length;
-
-                    return Positioned(
-                      bottom: 1,
-                      child: Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: completionRate >= 0.8
-                              ? AppTheme.success
-                              : completionRate >= 0.5
-                                  ? AppTheme.warning
-                                  : AppTheme.primary.withOpacity(0.5),
-                        ),
-                      ),
-                    );
-                  }
-                  return null;
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // 캘린더 (스크롤 가능)
+            Container(
+              margin: const EdgeInsets.all(AppTheme.spaceMd),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TableCalendar(
+                locale: 'ko_KR',
+                firstDay: DateTime.utc(2024, 1, 1),
+                lastDay: DateTime.utc(2030, 12, 31),
+                focusedDay: _focusedDay,
+                calendarFormat: _calendarFormat,
+                selectedDayPredicate: (day) {
+                  return isSameDay(_selectedDay, day);
                 },
-              ),
-              calendarStyle: CalendarStyle(
-                todayDecoration: BoxDecoration(
-                  color: AppTheme.primary.withOpacity(0.3),
-                  shape: BoxShape.circle,
+                onDaySelected: (selectedDay, focusedDay) {
+                  setState(() {
+                    _selectedDay = selectedDay;
+                    _focusedDay = focusedDay;
+                  });
+                  ref.read(selectedDateProvider.notifier).state = selectedDay;
+                },
+                onFormatChanged: (format) {
+                  setState(() {
+                    _calendarFormat = format;
+                  });
+                },
+                onPageChanged: (focusedDay) {
+                  _focusedDay = focusedDay;
+                  ref.read(monthlyRoutineDataProvider.notifier).loadMonth(focusedDay.year, focusedDay.month);
+                },
+                calendarBuilders: CalendarBuilders(
+                  markerBuilder: (context, date, events) {
+                    final normalizedDate = DateTime(date.year, date.month, date.day);
+                    final routine = monthlyData[normalizedDate];
+                    if (routine != null) {
+                      final completedCount = routine.items.where((item) => item.isCompleted).length;
+                      final completionRate = completedCount / routine.items.length;
+
+                      return Positioned(
+                        bottom: 1,
+                        child: Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: completionRate >= 0.8
+                                ? AppTheme.success
+                                : completionRate >= 0.5
+                                    ? AppTheme.warning
+                                    : AppTheme.primary.withOpacity(0.5),
+                          ),
+                        ),
+                      );
+                    }
+                    return null;
+                  },
                 ),
-                selectedDecoration: const BoxDecoration(
-                  color: AppTheme.primary,
-                  shape: BoxShape.circle,
+                calendarStyle: CalendarStyle(
+                  todayDecoration: BoxDecoration(
+                    color: AppTheme.primary.withOpacity(0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  selectedDecoration: const BoxDecoration(
+                    color: AppTheme.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  weekendTextStyle: const TextStyle(color: Colors.red, fontSize: 12),
+                  defaultTextStyle: const TextStyle(fontSize: 12),
+                  todayTextStyle: const TextStyle(fontSize: 12, color: Colors.black),
+                  selectedTextStyle: const TextStyle(fontSize: 12, color: Colors.white),
+                  outsideDaysVisible: false,
                 ),
-                weekendTextStyle: const TextStyle(color: Colors.red),
-                outsideDaysVisible: false,
-              ),
-              headerStyle: HeaderStyle(
-                formatButtonVisible: false,
-                titleCentered: true,
-                titleTextFormatter: (date, locale) =>
-                    DateFormat.yMMMM(locale).format(date),
-                titleTextStyle: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                daysOfWeekStyle: const DaysOfWeekStyle(
+                  weekdayStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                  weekendStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.red),
                 ),
+                headerStyle: HeaderStyle(
+                  formatButtonVisible: false,
+                  titleCentered: true,
+                  titleTextFormatter: (date, locale) =>
+                      DateFormat.yMMMM(locale).format(date),
+                  titleTextStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  leftChevronIcon: const Icon(Icons.chevron_left, size: 20),
+                  rightChevronIcon: const Icon(Icons.chevron_right, size: 20),
+                ),
+                rowHeight: 40,
               ),
             ),
-          ),
 
-          // 선택된 날짜 정보
-          Expanded(
-            child: selectedRoutineAsync.when(
+            // 선택된 날짜 정보
+            selectedRoutineAsync.when(
               data: (routine) => _buildRoutineDetail(routine),
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(child: CircularProgressIndicator()),
+              ),
               error: (e, _) => _buildRoutineDetail(null),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -371,9 +384,9 @@ class _RoutineCalendarScreenState extends ConsumerState<RoutineCalendarScreen> {
             padding: const EdgeInsets.all(AppTheme.spaceMd),
             child: Row(
               children: [
-                const Text('checklist', style: TextStyle(fontSize: 18)),
+                const Text('☑️', style: TextStyle(fontSize: 18)),
                 const SizedBox(width: 8),
-                const Text('루틴 체크리스트', style: AppTheme.subtitle),
+                const Text('아침루틴 체크리스트', style: AppTheme.subtitle),
               ],
             ),
           ),
@@ -410,9 +423,9 @@ class _RoutineCalendarScreenState extends ConsumerState<RoutineCalendarScreen> {
         children: [
           Row(
             children: [
-              const Text('heart', style: TextStyle(fontSize: 18)),
+              const Text('❤️', style: TextStyle(fontSize: 18)),
               const SizedBox(width: 8),
-              const Text('컨디션', style: AppTheme.subtitle),
+              const Text('컨디션 체크', style: AppTheme.subtitle),
             ],
           ),
           const SizedBox(height: AppTheme.spaceMd),
@@ -468,9 +481,11 @@ class _RoutineCalendarScreenState extends ConsumerState<RoutineCalendarScreen> {
         children: [
           Row(
             children: [
-              const Text('target', style: TextStyle(fontSize: 18)),
+              const Text('🎯', style: TextStyle(fontSize: 18)),
               const SizedBox(width: 8),
-              const Text('오늘의 목표', style: AppTheme.subtitle),
+              const Expanded(
+                child: Text('오늘 반드시 이룰 목표 1가지', style: AppTheme.subtitle),
+              ),
             ],
           ),
           const SizedBox(height: AppTheme.spaceSm),
@@ -494,9 +509,9 @@ class _RoutineCalendarScreenState extends ConsumerState<RoutineCalendarScreen> {
         children: [
           Row(
             children: [
-              const Text('calendar', style: TextStyle(fontSize: 18)),
+              const Text('📅', style: TextStyle(fontSize: 18)),
               const SizedBox(width: 8),
-              const Text('오늘의 일정', style: AppTheme.subtitle),
+              const Text('오늘의 주요일정 3가지', style: AppTheme.subtitle),
             ],
           ),
           const SizedBox(height: AppTheme.spaceSm),
@@ -547,7 +562,7 @@ class _RoutineCalendarScreenState extends ConsumerState<RoutineCalendarScreen> {
         children: [
           Row(
             children: [
-              const Text('pray', style: TextStyle(fontSize: 18)),
+              const Text('🙏', style: TextStyle(fontSize: 18)),
               const SizedBox(width: 8),
               const Text('감사일기', style: AppTheme.subtitle),
             ],

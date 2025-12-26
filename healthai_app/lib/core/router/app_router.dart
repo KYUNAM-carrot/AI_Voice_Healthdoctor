@@ -25,12 +25,20 @@ import '../../features/settings/screens/profile_edit_screen.dart';
 import '../../features/admin/screens/admin_dashboard_screen.dart';
 import '../../features/notification/screens/notification_settings_screen.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
+import '../../features/medical_consent/screens/medical_disclaimer_consent_screen.dart';
+
+/// 전역 NavigatorKey (알림 클릭 시 화면 이동용)
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
+/// 전역 GoRouter 인스턴스 (알림 클릭 시 화면 이동용)
+GoRouter? globalRouter;
 
 // Router configuration with authentication
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
 
-  return GoRouter(
+  final router = GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/onboarding',
     redirect: (context, state) async {
       final isOnboardingRoute = state.matchedLocation == '/onboarding';
@@ -178,6 +186,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/medical-consent/:characterId',
+        name: 'medical-consent',
+        builder: (context, state) {
+          final characterId = state.pathParameters['characterId']!;
+          final characterName = state.uri.queryParameters['name'] ?? '의사 선생님';
+          final familyProfileId = state.uri.queryParameters['profileId'];
+          final familyProfileName = state.uri.queryParameters['profileName'];
+          return MedicalDisclaimerConsentScreen(
+            characterId: characterId,
+            characterName: characterName,
+            familyProfileId: familyProfileId,
+            familyProfileName: familyProfileName,
+          );
+        },
+      ),
+      GoRoute(
         path: '/voice-conversation/:characterId',
         name: 'voice-conversation',
         builder: (context, state) {
@@ -195,4 +219,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+
+  // 전역 라우터 인스턴스 설정 (알림 클릭 시 화면 이동용)
+  globalRouter = router;
+
+  return router;
 });

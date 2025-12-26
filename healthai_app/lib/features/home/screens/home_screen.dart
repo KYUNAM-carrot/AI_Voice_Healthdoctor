@@ -11,6 +11,10 @@ import '../../family/providers/family_provider.dart';
 import '../../family/widgets/family_profile_selector.dart';
 import '../../routine/providers/routine_provider.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../auth/services/auth_service.dart';
+import '../../medical_consent/services/medical_consent_api_service.dart';
+import '../../health/providers/auto_sync_provider.dart';
+import '../../health/providers/wearable_stats_provider.dart';
 
 /// 홈 화면 - 세계 최고 수준의 음성 건강상담 앱
 class HomeScreen extends ConsumerStatefulWidget {
@@ -57,6 +61,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     // 수동 스크롤 감지
     _doctorScrollController.addListener(_onDoctorScroll);
+
+    // 앱 시작 시 자동 동기화 실행
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _runAutoSync();
+    });
+  }
+
+  /// 앱 시작 시 자동 동기화 실행
+  Future<void> _runAutoSync() async {
+    try {
+      // 가족 프로필 목록에서 self 프로필 찾기
+      final profilesAsync = ref.read(familyProfilesProvider);
+      final profiles = profilesAsync.valueOrNull ?? [];
+
+      // self 프로필 찾기
+      final selfProfile = profiles.where(
+        (p) => p.relationship == 'self' || p.relationship == '본인',
+      ).firstOrNull;
+
+      if (selfProfile == null) {
+        debugPrint('AutoSync: No self profile found, skipping');
+        return;
+      }
+
+      // 자동 동기화 실행
+      final autoSyncService = ref.read(autoSyncServiceProvider);
+      final result = await autoSyncService.syncOnAppStart(selfProfile.id);
+
+      debugPrint('AutoSync result: $result');
+
+      // 성공적으로 데이터가 동기화된 경우에만 메시지 표시
+      if (result.success && !result.skipped && result.insertedCount > 0) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '건강 데이터 동기화: ${result.insertedCount}개 추가',
+              ),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('AutoSync error: $e');
+    }
   }
 
   void _onDoctorScroll() {
@@ -129,6 +180,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final routineAsync = ref.watch(todayRoutineProvider);
     final currentUser = ref.watch(currentUserProvider);
     final userName = currentUser?.name ?? '사용자';
+    final todayHealthAsync = ref.watch(todayHealthDataProvider);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
@@ -139,6 +191,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ref.invalidate(charactersProvider);
             ref.invalidate(familyProfilesProvider);
             ref.invalidate(todayRoutineProvider);
+            ref.invalidate(todayHealthDataProvider);
             await _loadRecentHistories();
           },
           child: CustomScrollView(
@@ -165,7 +218,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
                       // 건강 대시보드
                       _buildHealthDashboard(
-                        context, completionRate, completedCount, routineAsync,
+                        context,
+                        completionRate,
+                        completedCount,
+                        routineAsync,
+                        todayHealthAsync,
                       ),
                       const SizedBox(height: AppTheme.spaceXl),
 
@@ -444,7 +501,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
       _QuickAction(
         icon: Icons.calendar_month_outlined,
-        label: '루틴 기록',
+        label: '루틴기록조회',
         color: const Color(0xFF74B9FF),
         onTap: () => context.push('/routine-calendar'),
       ),
@@ -532,15 +589,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               child: Icon(action.icon, color: action.color, size: 24),
             ),
             const SizedBox(height: AppTheme.spaceSm),
-            Text(
-              action.label,
-              style: AppTheme.caption.copyWith(
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textPrimary,
+            SizedBox(
+              width: double.infinity,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  action.label,
+                  style: AppTheme.caption.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textPrimary,
+                    fontSize: 10,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -554,12 +616,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     double completionRate,
     int completedCount,
     AsyncValue routineAsync,
+    AsyncValue<TodayHealthData> todayHealthAsync,
   ) {
     final totalCount = routineAsync.maybeWhen(
       data: (routine) => routine.items.length,
       orElse: () => 8,
     );
     final percentage = (completionRate * 100).toInt();
+
+    // 오늘의 건강 데이터
+    final todayHealth = todayHealthAsync.valueOrNull ?? TodayHealthData();
+
+    // 숫자 포맷팅
+    String formatSteps(int steps) {
+      if (steps >= 1000) {
+        return '${(steps / 1000).toStringAsFixed(1).replaceAll('.0', '')}k';
+      }
+      return steps.toString();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -598,9 +672,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 icon: Icons.directions_walk,
                 iconColor: AppTheme.success,
                 title: '걸음수',
-                value: '8,234',
-                subtitle: '목표 10,000',
-                progress: 0.82,
+                value: todayHealth.steps > 0
+                    ? formatSteps(todayHealth.steps)
+                    : '-',
+                subtitle: todayHealth.steps > 0
+                    ? '목표 ${formatSteps(todayHealth.stepsGoal)}'
+                    : '데이터 없음',
+                progress: todayHealth.stepsProgress,
                 progressColor: AppTheme.success,
                 onTap: () => context.push('/health/wearable'),
               ),
@@ -615,10 +693,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 icon: Icons.bedtime_outlined,
                 iconColor: const Color(0xFF74B9FF),
                 title: '수면',
-                value: '7.5h',
-                subtitle: '양호',
-                progress: 0.94,
+                value: todayHealth.sleepHours > 0
+                    ? todayHealth.sleepFormatted
+                    : '-',
+                subtitle: todayHealth.sleepStatus,
+                progress: todayHealth.sleepProgress,
                 progressColor: const Color(0xFF74B9FF),
+                onTap: () => context.push('/health/wearable'),
               ),
             ),
             const SizedBox(width: AppTheme.spaceMd),
@@ -627,10 +708,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 icon: Icons.favorite_outline,
                 iconColor: const Color(0xFFFF7675),
                 title: '심박수',
-                value: '72',
-                subtitle: 'BPM · 정상',
-                progress: 0.72,
+                value: todayHealth.heartRate > 0
+                    ? '${todayHealth.heartRate}'
+                    : '-',
+                subtitle: todayHealth.heartRate > 0
+                    ? 'BPM · ${todayHealth.heartRateStatus}'
+                    : '데이터 없음',
+                progress: todayHealth.heartRateProgress,
                 progressColor: const Color(0xFFFF7675),
+                onTap: () => context.push('/health/wearable'),
               ),
             ),
           ],
@@ -807,13 +893,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           characterName: displayName,
         );
 
-        // 프로필이 선택되면 상담 화면으로 이동
-        if (selectedProfile != null && context.mounted) {
-          context.push(
-            '/voice-conversation/${character.id}'
-            '?name=${Uri.encodeComponent(displayName)}'
-            '&profileId=${selectedProfile.id}'
-            '&profileName=${Uri.encodeComponent(selectedProfile.name)}',
+        // 프로필이 선택되지 않으면 종료
+        if (selectedProfile == null || !context.mounted) return;
+
+        try {
+          // 동의 여부 확인 - AuthService에서 토큰 가져오기
+          final authService = AuthService();
+          final token = await authService.getAccessToken();
+
+          if (token == null) {
+            throw Exception('인증 토큰이 없습니다. 다시 로그인해 주세요.');
+          }
+
+          final consentService = MedicalConsentApiService();
+          consentService.setAuthToken(token);
+          final consentCheck = await consentService.checkConsent();
+
+          if (!context.mounted) return;
+
+          // 동의하지 않았으면 동의 화면으로 이동
+          if (!consentCheck.hasConsented) {
+            context.push(
+              '/medical-consent/${character.id}'
+              '?name=${Uri.encodeComponent(displayName)}'
+              '&profileId=${selectedProfile.id}'
+              '&profileName=${Uri.encodeComponent(selectedProfile.name)}',
+            );
+          } else {
+            // 이미 동의했으면 바로 음성 상담 화면으로 이동
+            context.push(
+              '/voice-conversation/${character.id}'
+              '?name=${Uri.encodeComponent(displayName)}'
+              '&profileId=${selectedProfile.id}'
+              '&profileName=${Uri.encodeComponent(selectedProfile.name)}',
+            );
+          }
+        } catch (e) {
+          if (!context.mounted) return;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('동의 확인 중 오류가 발생했습니다: $e'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       },

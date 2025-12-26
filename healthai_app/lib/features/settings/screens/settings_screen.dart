@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/common_widgets.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/profile_provider.dart';
+import '../../health/providers/auto_sync_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -23,6 +24,21 @@ class SettingsScreen extends ConsumerWidget {
         children: [
           // 내 프로필 섹션
           _buildProfileSection(context, ref, user),
+          const SizedBox(height: AppTheme.spaceLg),
+
+          // 알림 설정
+          _buildSection(
+            context,
+            title: '알림',
+            items: [
+              _SettingsItem(
+                icon: Icons.notifications_outlined,
+                title: '알림 설정',
+                subtitle: '푸시 알림 및 리마인더 관리',
+                onTap: () => context.push('/notification-settings'),
+              ),
+            ],
+          ),
           const SizedBox(height: AppTheme.spaceLg),
 
           // 구독 관리
@@ -62,45 +78,7 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: AppTheme.spaceLg),
 
           // 건강 데이터 연동
-          _buildSection(
-            context,
-            title: '건강 데이터 연동',
-            items: [
-              _SettingsItem(
-                icon: Icons.health_and_safety,
-                title: 'HealthKit 동기화 (iOS)',
-                subtitle: 'Apple HealthKit 데이터 연동',
-                onTap: () => context.push('/health/healthkit'),
-              ),
-              _SettingsItem(
-                icon: Icons.monitor_heart,
-                title: 'Health Connect (Android)',
-                subtitle: 'Google Health Connect 데이터 연동',
-                onTap: () => context.push('/health/health-connect'),
-              ),
-              _SettingsItem(
-                icon: Icons.watch,
-                title: '웨어러블 통합 동기화',
-                subtitle: '플랫폼 통합 건강 데이터 관리',
-                onTap: () => context.push('/health/wearable'),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppTheme.spaceLg),
-
-          // 알림 설정
-          _buildSection(
-            context,
-            title: '알림',
-            items: [
-              _SettingsItem(
-                icon: Icons.notifications_outlined,
-                title: '알림 설정',
-                subtitle: '푸시 알림 및 리마인더 관리',
-                onTap: () => context.push('/notification-settings'),
-              ),
-            ],
-          ),
+          _buildHealthDataSection(context, ref),
           const SizedBox(height: AppTheme.spaceLg),
 
           // 앱 정보
@@ -241,6 +219,129 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// 건강 데이터 연동 섹션 (자동 동기화 토글 포함)
+  Widget _buildHealthDataSection(BuildContext context, WidgetRef ref) {
+    final autoSyncSetting = ref.watch(autoSyncSettingProvider);
+    final lastSyncTimeAsync = ref.watch(lastSyncTimeProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceSm),
+          child: Text(
+            '건강 데이터 연동',
+            style: AppTheme.h3.copyWith(
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppTheme.spaceSm),
+        CustomCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              // 자동 동기화 토글
+              ListTile(
+                leading: const Icon(
+                  Icons.sync,
+                  color: AppTheme.primary,
+                ),
+                title: const Text('자동 동기화'),
+                subtitle: lastSyncTimeAsync.when(
+                  data: (lastSync) {
+                    if (lastSync == null) {
+                      return const Text('앱 시작 시 건강 데이터 자동 동기화');
+                    }
+                    final timeAgo = _formatTimeAgo(lastSync);
+                    return Text('마지막 동기화: $timeAgo');
+                  },
+                  loading: () => const Text('앱 시작 시 건강 데이터 자동 동기화'),
+                  error: (_, __) => const Text('앱 시작 시 건강 데이터 자동 동기화'),
+                ),
+                trailing: autoSyncSetting.when(
+                  data: (enabled) => Switch(
+                    value: enabled,
+                    onChanged: (value) {
+                      ref.read(autoSyncSettingProvider.notifier).setEnabled(value);
+                    },
+                    activeColor: AppTheme.primary,
+                  ),
+                  loading: () => const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  error: (_, __) => Switch(
+                    value: true,
+                    onChanged: (value) {
+                      ref.read(autoSyncSettingProvider.notifier).setEnabled(value);
+                    },
+                    activeColor: AppTheme.primary,
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              // HealthKit (iOS)
+              ListTile(
+                leading: const Icon(
+                  Icons.health_and_safety,
+                  color: AppTheme.primary,
+                ),
+                title: const Text('HealthKit 동기화 (iOS)'),
+                subtitle: const Text('Apple HealthKit 데이터 연동'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/health/healthkit'),
+              ),
+              const Divider(height: 1),
+              // Health Connect (Android)
+              ListTile(
+                leading: const Icon(
+                  Icons.monitor_heart,
+                  color: AppTheme.primary,
+                ),
+                title: const Text('Health Connect (Android)'),
+                subtitle: const Text('Google Health Connect 데이터 연동'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/health/health-connect'),
+              ),
+              const Divider(height: 1),
+              // 웨어러블 통합 동기화
+              ListTile(
+                leading: const Icon(
+                  Icons.watch,
+                  color: AppTheme.primary,
+                ),
+                title: const Text('웨어러블 통합 동기화'),
+                subtitle: const Text('플랫폼 통합 건강 데이터 관리'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/health/wearable'),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 시간 포맷팅 (예: "5분 전", "2시간 전")
+  String _formatTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return '방금 전';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}분 전';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}시간 전';
+    } else if (difference.inDays == 1) {
+      return '어제';
+    } else {
+      return '${difference.inDays}일 전';
+    }
   }
 
   Widget _buildSection(

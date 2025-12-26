@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/push_notification_service.dart';
 import '../../../core/api/api_client.dart';
 
+export '../../../core/services/push_notification_service.dart';
+
 /// 푸시 알림 서비스 Provider
 final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
   return PushNotificationService();

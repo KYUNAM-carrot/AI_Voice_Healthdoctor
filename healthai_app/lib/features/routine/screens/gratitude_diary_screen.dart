@@ -310,20 +310,20 @@ class _GratitudeDiaryScreenState extends ConsumerState<GratitudeDiaryScreen> {
                 label: const Text('항목 추가'),
               ),
             ),
-            const SizedBox(height: AppTheme.space2xl),
-          ],
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppTheme.spaceLg),
-          child: ElevatedButton(
-            onPressed: _saveGratitude,
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
+            const SizedBox(height: AppTheme.spaceXl),
+
+            // 저장하기 버튼 (스크롤 영역 내부로 이동)
+            SafeArea(
+              child: ElevatedButton(
+                onPressed: _saveGratitude,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
+                child: const Text('저장하기'),
+              ),
             ),
-            child: const Text('저장하기'),
-          ),
+            const SizedBox(height: AppTheme.spaceLg),
+          ],
         ),
       ),
     );
