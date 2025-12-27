@@ -35,7 +35,7 @@
     <uses-permission android:name="android.permission.health.WRITE_SLEEP"/>
 
     <application
-        android:label="음성 건강주치의"
+        android:label="헬스닥톡"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">

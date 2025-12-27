@@ -208,6 +208,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     children: [
                       const SizedBox(height: AppTheme.spaceLg),
 
+                      // 응급상황 보조 버튼
+                      _buildEmergencyButton(context),
+                      const SizedBox(height: AppTheme.spaceMd),
+
                       // 음성 상담 히어로 카드
                       _buildVoiceConsultationHero(context),
                       const SizedBox(height: AppTheme.spaceXl),
@@ -378,6 +382,73 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ),
         const SizedBox(width: AppTheme.spaceLg),
       ],
+    );
+  }
+
+  /// 응급상황 보조 버튼
+  Widget _buildEmergencyButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push('/emergency'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFF4444),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFF4444).withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.emergency,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '응급상황 신고 도움',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    '119 신고 + 응급처치 음성 안내',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right,
+              color: Colors.white70,
+              size: 24,
+            ),
+          ],
+        ),
+      ),
     );
   }
 

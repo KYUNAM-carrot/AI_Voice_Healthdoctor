@@ -26,6 +26,7 @@ import '../../features/admin/screens/admin_dashboard_screen.dart';
 import '../../features/notification/screens/notification_settings_screen.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/medical_consent/screens/medical_disclaimer_consent_screen.dart';
+import '../../features/emergency/screens/emergency_screen.dart';
 
 /// 전역 NavigatorKey (알림 클릭 시 화면 이동용)
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -163,6 +164,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/routine-stats',
         name: 'routine-stats',
         builder: (context, state) => const RoutineStatsScreen(),
+      ),
+      GoRoute(
+        path: '/emergency',
+        name: 'emergency',
+        builder: (context, state) => const EmergencyScreen(),
       ),
       GoRoute(
         path: '/conversation-history',
